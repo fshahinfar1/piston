@@ -1,3 +1,4 @@
 *.pyc
 tags
 tags.*
+.dmypy.json
