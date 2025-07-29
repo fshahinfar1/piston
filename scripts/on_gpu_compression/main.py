@@ -12,8 +12,11 @@ from nvidia import nvcomp
 DEV_GPU='cuda:0'
 DEV_CPU='cpu'
 
-model_name: str = 'openai-community/gpt2'
-model = AutoModelForCausalLM.from_pretrained(model_name, torch_dtype="auto", device_map=DEV_GPU, local_files_only=True)
+max_context_len: int = 2 ** 13
+# 'openai-community/gpt2'
+model_name: str = 'microsoft/Phi-3.5-mini-instruct'
+model = AutoModelForCausalLM.from_pretrained(model_name,
+        torch_dtype="auto", device_map=DEV_GPU, local_files_only=True)
 model.eval()
 tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=True)
 model.to('cuda:0')
@@ -130,8 +133,8 @@ class Req:
         between CPU and GPU
         report size and transmission time
         """
-        cache = self.auto_regression(max_lenght=128)
-        repeat = 40
+        cache = self.auto_regression(max_lenght=max_context_len)
+        repeat = 2
         cache_size = cache_total_size(cache)
         # we repeat the measurement. each entry is one instance. the entry is a
         # tuple of the form (to-cpu-time, to-gpu-time).
@@ -144,11 +147,15 @@ class Req:
             end = time.perf_counter()
             to_cpu_time = end - start
 
+            torch.cuda.empty_cache()
+
             # to GPU
             start = time.perf_counter()
             cache_move(cache, DEV_GPU)
             end = time.perf_counter()
             to_gpu_time = end - start
+
+            torch.cuda.empty_cache()
 
             time_measurements.append((to_cpu_time, to_gpu_time))
 
@@ -156,39 +163,50 @@ class Req:
 
     def measure_compressed_kv_cache_moving_time(self) -> Dict[str, Any]:
         cache = self.auto_regression(max_lenght=128)
-        repeat = 40
+        repeat = 2
         algos = ["ANS", "LZ4", "Cascaded", "GDeflate"]
 
         cache_size = cache_total_size(cache)
-        result: Dict[str, Any] = {
-                'bytes': cache_size,
-                }
+        result: Dict[str, Any] = { 'bytes': cache_size, }
         for algo in algos:
+            # TODO: if we decompress the cache, do we get the same tensors (check correctness)
+            start = time.perf_counter()
             comp_tensors = cache_compress(cache, algo)
+            end = time.perf_counter()
+            comp_time = end - start
+
+
             sz = 0
             for arr in comp_tensors:
                 sz += arr.size * arr.item_size
 
             measurements = []
+            # TODO: does cpu() and cuda() always move the data or only once?
+            num_tensors = len(comp_tensors)
             for _ in range(repeat):
                 start = time.perf_counter()
-                for arr in comp_tensors:
-                    arr.cpu()
+                for i in range(num_tensors):
+                    comp_tensors[i] = comp_tensors[i].cpu()
                 end = time.perf_counter()
                 to_cpu_time = end - start
 
+                torch.cuda.empty_cache()
+
                 start = time.perf_counter()
-                for arr in comp_tensors:
-                    arr.cuda()
+                for i in range(num_tensors):
+                    comp_tensors[i] = comp_tensors[i].cuda()
                 end = time.perf_counter()
                 to_gpu_time = end - start
+
                 measurements.append((to_cpu_time, to_gpu_time))
+
+                torch.cuda.empty_cache()
 
             result[algo] = {
                     'bytes': sz,
                     'measurements': measurements,
+                    'compression_time': comp_time,
                     }
-
         return result
 
 
@@ -200,20 +218,25 @@ def main() -> None:
     reqs = [Req(p) for p in all_prompts]
 
     for r in reqs:
-        print(r.prompt)
-        # r.auto_regression(decode=True)
-        res = r.measure_kv_cache_moving_time()
+        print('\n', '-----', r.prompt)
+        torch.cuda.empty_cache()
 
+        # Print the Models response to prompts
+        # r.auto_regression(max_lenght=max_context_len, decode=True)
+
+        sample_index = 1
+        res = r.measure_kv_cache_moving_time()
         m: List[Tuple[int,int]] = res['measurements']
-        print(res['bytes'])
-        print(m[5][0] * 1000, '    ', m[5][1] * 1000)
+        print('KV Cache size:', res['bytes'] / 1000000, 'MB')
+        print(m[sample_index][0] * 1000, '    ', m[sample_index][1] * 1000)
+        print()
 
         res = r.measure_compressed_kv_cache_moving_time()
         for a in ["ANS", "LZ4", "Cascaded", "GDeflate"]:
-            print(a, ':', res[a]['bytes'], 'B')
-            print(res[a]['measurements'][5][0] * 1000,
-                    res[a]['measurements'][5][1] * 1000)
-
+            print(a, ':', res[a]['bytes'] / 1000000, 'MB', '   ', 'Compression Time:', res[a]['compression_time'] * 1000, 'ms')
+            print(res[a]['measurements'][sample_index][0] * 1000,
+                    res[a]['measurements'][sample_index][1] * 1000)
+            print()
 
     # for i in range(1000):
     #     print(i, '---'*10)
