@@ -1,6 +1,7 @@
 import numpy as np
 import cupy as cp
 from nvidia import nvcomp
+import torch
 
 
 def do_experiment(algo):
@@ -76,10 +77,39 @@ def do_exp_with_cupy(algo):
     print('-------------')
 
 
+def do_exp_with_torch(algo):
+    codec = nvcomp.Codec(algorithm=algo)
+
+    raw_data = np.arange(0, 10000, dtype=np.float16)
+    tensor = torch.tensor(raw_data, dtype=torch.float16).to('cuda:0')
+
+    arr = cp.from_dlpack(tensor)
+    arr_wrap = arr.view(cp.uint8)
+
+    comp = codec.encode(nvcomp.as_array(arr_wrap))
+
+    decomp = codec.decode(comp).cuda()
+    t2 = cp.fromDlpack(decomp.to_dlpack()).view(cp.float16)
+
+    tensor2 = torch.utils.dlpack.from_dlpack(t2.toDlpack())
+
+    print('orig shape:', tensor.numel(), tensor.element_size())
+    print('comp shape:', comp.size, comp.item_size)
+    print('decomp shape:', tensor2.numel(), tensor2.element_size())
+
+    assert tensor2.numel() == tensor.numel()
+
+    for i, (a,b) in enumerate(zip(tensor, tensor2)):
+        if a != b:
+            print('@', i, ':', a, 'vs', b)
+            raise RuntimeError('test failed')
+    print('Okay')
+    print('-------------') 
 
 
 for x in ["ANS", "LZ4", "GDeflate"]: # "Cascaded",
     print(x)
     # do_experiment(x)
-    do_exp_with_cupy(x)
+    # do_exp_with_cupy(x)
+    do_exp_with_torch(x)
 
