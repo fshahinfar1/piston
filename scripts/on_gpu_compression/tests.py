@@ -11,6 +11,7 @@ DEV_GPU ='cuda:0'
 DEV_CPU ='cpu'
 COMPRESSION_ALGORITHMS = ["ANS", "LZ4", "Cascaded", "GDeflate"]
 CACHE_DIR='/mnt/farbod'
+REPEAT = 5
 
 
 def measure_kv_cache_moving_time(req: Req) -> Dict[str, Any]:
@@ -20,13 +21,12 @@ def measure_kv_cache_moving_time(req: Req) -> Dict[str, Any]:
     report size and transmission time
     """
     cache = get_cache(req)
-    repeat = 40
     cache_size = cache_total_size(cache)
     # we repeat the measurement. each entry is one instance. the entry is a
     # tuple of the form (to-cpu-time, to-gpu-time).
     time_measurements = []
 
-    for _ in range(repeat):
+    for _ in range(REPEAT):
         # to CPU
         start = time.perf_counter()
         cache_move(cache, DEV_CPU)
@@ -50,10 +50,16 @@ def measure_kv_cache_moving_time(req: Req) -> Dict[str, Any]:
 
 def measure_compressed_kv_cache_moving_time(req) -> Dict[str, Any]:
     cache = get_cache(req)
-    repeat = 40
 
     cache_size = cache_total_size(cache)
     result: Dict[str, Any] = { 'bytes': cache_size, }
+
+    ptrs = []
+    for t in cache_get_all_tensors(cache):
+        ptrs.append(t.data_ptr())
+    result['pointers'] = ptrs
+
+
     for algo in COMPRESSION_ALGORITHMS:
         # TODO: if we decompress the cache, do we get the same tensors (check correctness)
         start = time.perf_counter()
@@ -69,7 +75,7 @@ def measure_compressed_kv_cache_moving_time(req) -> Dict[str, Any]:
         measurements = []
         # TODO: does cpu() and cuda() always move the data or only once?
         num_tensors = len(comp_tensors)
-        for _ in range(repeat):
+        for _ in range(REPEAT):
             start = time.perf_counter()
             for i in range(num_tensors):
                 comp_tensors[i] = comp_tensors[i].cpu()
@@ -88,10 +94,17 @@ def measure_compressed_kv_cache_moving_time(req) -> Dict[str, Any]:
 
             torch.cuda.empty_cache()
 
+
+        ptrs = []
+        for arr in comp_tensors:
+            t = torch.from_dlpack(arr)
+            ptrs.append(t.data_ptr())
+
         result[algo] = {
                 'bytes': sz,
                 'measurements': measurements,
                 'compression_time': comp_time,
+                'pointers': ptrs,
                 }
     return result
 
@@ -101,59 +114,54 @@ def assert_compression_decompression_works(req: Req) -> None:
     Make sure when the code for compression decompression is actually working
     correctly.
     """
-    from nvidia import nvcomp
-    import cupy as cp
     print('Computing the kv-cache ...')
+    gold_cache = get_cache(req)
+    num_layers = len(gold_cache.layers)
+    cache_move(gold_cache, DEV_CPU) # we have memory limits
 
-    # cache = get_cache(req)
+    print('Start compression test ...')
+    for algo in COMPRESSION_ALGORITHMS:
+        print(algo, '---')
 
+        cache = get_cache(req)
+        comp_tensors = cache_compress(cache, algo)
+        del cache # this cache is now compressed and its tensors are mangled
+        torch.cuda.empty_cache()
 
-    codec = nvcomp.Codec(algorithm='LZ4')
-    # tensor = cache.key_cache[0]
-    # tensor = tensor.flatten()
+        # get compressed size
+        comp_sz = 0
+        for arr in comp_tensors:
+            comp_sz += arr.size * arr.item_size
 
-    # arr = cp.asarray(tensor, dtype=cp.float16)
-    # for i in range(tensor.numel()):
-    #     assert tensor[i] == arr[i]
+        decomp_cache = cache_decompress(comp_tensors, num_layers, algo)
+        del comp_tensors # we don't need the pointers to arrays, they are mangled
+        torch.cuda.empty_cache()
+        cache_move(decomp_cache, DEV_CPU) # we have memory limits
 
+        orig_tensors = cache_get_all_tensors(gold_cache)
+        decomp_tensors = cache_get_all_tensors(decomp_cache)
+        assert len(orig_tensors) == len(decomp_tensors), 'number of tensors must match'
 
-    arr = cp.random.rand(4000).astype(cp.float16)
-    comp = codec.encode(nvcomp.as_array(arr))
+        orig_sz = cache_total_size(gold_cache)
+        print('    ', orig_sz, '-->', comp_sz)
 
-    print('orig:', arr.size * arr.itemsize)
-    print('comp:', comp.size * comp.item_size)
+        for q, (t1, t2) in enumerate(zip(orig_tensors, decomp_tensors)):
+            # Make sure the tensor shape is preserved
+            # print('original:', t1.shape)
+            # print('decomp:', t2.shape)
+            # if t1.shape != t2.shape:
+            #     print('Warning: the shapes does not match (maybe the decompressed array is flattened but we should fix this)')
 
-    decomp = decomp = codec.decode(comp)
-    t2 = cp.array(decomp, dtype=cp.float16)
+            tmp1 = t1.flatten()
+            tmp2 = t2.flatten()
+            assert len(tmp1.shape) == 1 and tmp1.shape == tmp2.shape
+            assert tmp1.dtype == tmp2.dtype
 
-    print('orig shape:', arr.size)
-    print('decomp shape:', t2.size)
+            if not torch.all(tmp1.eq(tmp2)):
+                print('@', q)
+                raise RuntimeError('test failed')
 
-    print(t2.shape)
-    print(t2[0])
-    print(arr[0])
-
-
-    # print('Start compression test ...')
-    # for algo in COMPRESSION_ALGORITHMS:
-    #     comp_tensors = cache_compress(cache, algo)
-    #     decomp_cache = cache_decompress(comp_tensors, len(cache.key_cache), algo)
-    #     for t1, t2 in zip(cache.key_cache + cache.value_cache,
-    #             decomp_cache.key_cache + decomp_cache.value_cache):
-    #         # Make sure the tensor shape is preserved
-    #         print('original:', t1.shape)
-    #         print('decomp:', t2.shape)
-    #         if t1.shape != t2.shape:
-    #             print('Warning: the shapes does not match (maybe flattened)')
-
-    #         tmp1 = t1.flatten()
-    #         tmp2 = t2.flatten()
-    #         assert len(tmp1.shape) == 1 and tmp1.shape == tmp2.shape
-
-    #         for a,b in zip(tmp1, tmp2):
-    #             print(a,b)
-    #             assert a == b, f'The {algo} compression/decompression did not work correctly'
-    #     print('  --', algo, 'Passed compression test')
+        print('   *', algo, 'Passed compression test')
 
 
 def get_cache(req: Req)-> DynamicCache:

@@ -10,11 +10,19 @@ from transformers.generation.utils import DynamicCache
 
 DEV_CPU='cpu'
 
+def cache_get_all_tensors(cache: DynamicCache) -> List[torch.Tensor]:
+    tensors: List[torch.Tensor] = []
+    for layer in cache.layers:
+        tensors.append(layer.keys)
+        tensors.append(layer.values)
+    return tensors
+
+
 
 def cache_save_to_disk(cache: DynamicCache, file_name: str) -> None:
     cache_dict = {
-        "key_cache": [t.cpu() for t in cache.key_cache],
-        "value_cache": [t.cpu() for t in cache.value_cache],
+        "key_cache": [layer.keys.cpu() for layer in cache.layers],
+        "value_cache": [layer.values.cpu() for layer in cache.layers],
     }
     torch.save(cache_dict, file_name)
 
@@ -22,8 +30,11 @@ def cache_save_to_disk(cache: DynamicCache, file_name: str) -> None:
 def cache_load_from_disk(file_name: str) -> DynamicCache:
     loaded: Dict[str, List[torch.Tensor]] = torch.load(file_name, map_location=DEV_CPU)
     cache = DynamicCache()
-    cache.key_cache = [t for t in loaded["key_cache"]]
-    cache.value_cache = [t for t in loaded["value_cache"]]
+    num_layers = len(loaded['key_cache'])
+    cache.append_new_layers(layer_idx=num_layers-1)
+    for i in range(num_layers):
+        cache.layers[i].keys = loaded['key_cache'][i]
+        cache.layers[i].values = loaded['value_cache'][i]
     return cache
 
 
@@ -31,52 +42,80 @@ def cache_move(cache: DynamicCache, dev: str) -> None:
     """
     move tensors of a cache from GPU to CPU
     """
-    for i in range(len(cache.key_cache)):
-        cache.key_cache[i] = cache.key_cache[i].to(dev)
-        cache.value_cache[i] = cache.value_cache[i].to(dev)
+    num_layers = len(cache.layers)
+    for i in range(num_layers):
+        cache.layers[i].keys = cache.layers[i].keys.to(dev)
+        cache.layers[i].values = cache.layers[i].values.to(dev)
 
 
-def cache_decompress(list_comp_arr: List[nvcomp.Array], num_tokens, comp_algo) -> DynamicCache:
+def cache_decompress(list_comp_arr: List[nvcomp.Array], num_layers: int,
+        comp_algo: str) -> DynamicCache:
     """
+    NOTE: Assumption is that key/value tensors are fp16
     """
     codec = nvcomp.Codec(algorithm=comp_algo)
     cache = DynamicCache()
 
+    cache.append_new_layers(layer_idx=num_layers-1)
+
+    # mempool = cp.get_default_memory_pool()
+
     for i, arr in enumerate(list_comp_arr):
-        arr2 = codec.decode(arr)
-        cp_arr = cp.asarray(arr2)
-        tensor = torch.as_tensor(cp_arr)
-        if i < num_tokens:
-            cache.key_cache.append(tensor)
+        # arr = arr.cuda()
+        decomp = codec.decode(arr)# .cuda()
+        cp_arr = cp.from_dlpack(decomp.to_dlpack()).view(cp.float16)
+        tensor = torch.tensor(cp_arr) # make a copy
+        del cp_arr
+        del decomp
+        # mempool.free_all_blocks()
+
+        # Figure out which layer it is
+        index = i // 2
+        # Figure out if it's as key or value
+        if i % 2 == 0:
+            cache.layers[index].keys = tensor
         else:
-            cache.value_cache.append(tensor)
+            cache.layers[index].values = tensor
+
+
     return cache
 
 
 def cache_compress(cache: DynamicCache, comp_algo: str) -> List[nvcomp.Array]:
     """
     Compress tensors of a cache
+    
+    This will overwrite the cache tensors, so the cache object will be invalid
     """
-    # TODO: figure if I need to set datatype: , dtype="<f2"   # "<f2" for float16
-    tensors = cache.key_cache + cache.value_cache
+    tensors = cache_get_all_tensors(cache)
     codec = nvcomp.Codec(algorithm=comp_algo)
-    compressed_tensors = []
+    list_comp_arr = []
     for tensor in tensors:
-        arr = nvcomp.from_dlpack(tensor)
-        compressed = codec.encode(arr)
-        compressed_tensors.append(compressed)
-    return compressed_tensors
+        assert tensor.dtype == torch.float16, 'compression/decompression assumes and expects tensors of type fp16'
+        arr = cp.from_dlpack(tensor).view(cp.uint8)
+        comp = codec.encode(nvcomp.from_dlpack(arr))
+        list_comp_arr.append(comp)
+
+    mempool = cp.get_default_memory_pool()
+    mempool.free_all_blocks()
+
+    return list_comp_arr
 
 
 def cache_total_size(cache: DynamicCache) -> int:
     """
     memory usage of a KV Cache tensors
     """
+    tensors: List[torch.Tensor] = []
+    for layer in cache.layers:
+        tensors.append(layer.keys)
+        tensors.append(layer.values)
+
     total_bytes = 0
-    for tensor in cache.key_cache + cache.value_cache:
+    for tensor in tensors:
         if isinstance(tensor, torch.Tensor):
             total_bytes += tensor.element_size() * tensor.numel()
         else:
-            print('something is not tensor')
+            raise RuntimeError('something is not tensor')
     return total_bytes
 

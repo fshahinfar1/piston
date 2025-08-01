@@ -80,7 +80,7 @@ def do_exp_with_cupy(algo):
 def do_exp_with_torch(algo):
     codec = nvcomp.Codec(algorithm=algo)
 
-    raw_data = np.arange(0, 10000, dtype=np.float16)
+    raw_data = np.arange(0, 4552704, dtype=np.float16)
     tensor = torch.tensor(raw_data, dtype=torch.float16).to('cuda:0')
 
     arr = cp.from_dlpack(tensor)
@@ -89,9 +89,9 @@ def do_exp_with_torch(algo):
     comp = codec.encode(nvcomp.as_array(arr_wrap))
 
     decomp = codec.decode(comp).cuda()
-    t2 = cp.fromDlpack(decomp.to_dlpack()).view(cp.float16)
+    t2 = cp.from_dlpack(decomp.to_dlpack()).view(cp.float16)
 
-    tensor2 = torch.utils.dlpack.from_dlpack(t2.toDlpack())
+    tensor2 = torch.tensor(t2)
 
     print('orig shape:', tensor.numel(), tensor.element_size())
     print('comp shape:', comp.size, comp.item_size)
@@ -107,9 +107,45 @@ def do_exp_with_torch(algo):
     print('-------------') 
 
 
+def do_exp_list_of_tensors(algo):
+    codec = nvcomp.Codec(algorithm=algo)
+    raw_data = [np.random.rand(4552704).astype(np.float16)
+                                            for j in range(64)]
+    raw_data = [torch.tensor(d, dtype=torch.float16).to('cuda')
+                                                for d in raw_data]
+
+    comp_arr = []
+    for tensor in raw_data:
+        tmp = cp.from_dlpack(tensor).view(cp.uint8)
+        comp = codec.encode(nvcomp.as_array(tmp))
+        comp_arr.append(comp)
+
+    # Create a new codec
+    codec = nvcomp.Codec(algorithm=algo)
+    decomp_arr = []
+    for comp in comp_arr:
+        decomp = codec.decode(comp)
+        tmp = cp.from_dlpack(decomp.to_dlpack()).view(cp.float16)
+        tensor = torch.tensor(tmp)
+        decomp_arr.append(tensor)
+
+    # del comp_arr
+
+    for q, (t1, t2) in enumerate(zip(raw_data, decomp_arr)):
+        # print('orig shape:', t1.numel(), t1.element_size())
+        # print('decomp shape:', t2.numel(), t2.element_size())
+
+        assert t2.numel() == t1.numel()
+
+        if not torch.all(t1.eq(t2)):
+            print('tensor:', q)
+            raise RuntimeError('test failed')
+
+
 for x in ["ANS", "LZ4", "GDeflate"]: # "Cascaded",
     print(x)
     # do_experiment(x)
     # do_exp_with_cupy(x)
-    do_exp_with_torch(x)
+    # do_exp_with_torch(x)
+    do_exp_list_of_tensors(x)
 
