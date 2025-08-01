@@ -9,7 +9,7 @@ from req import Req
 MAX_CONTENT_LEN: int = 2 ** 13
 DEV_GPU ='cuda:0'
 DEV_CPU ='cpu'
-COMPRESSION_ALGORITHMS = ["ANS", "LZ4", "Cascaded", "GDeflate"]
+COMPRESSION_ALGORITHMS = ["Gridfour", "ANS", "LZ4", "Cascaded", "GDeflate"]
 CACHE_DIR='/mnt/farbod'
 REPEAT = 5
 
@@ -70,7 +70,10 @@ def measure_compressed_kv_cache_moving_time(req) -> Dict[str, Any]:
 
         sz = 0
         for arr in comp_tensors:
-            sz += arr.size * arr.item_size
+            if isinstance(arr, CompressedData):
+                sz += len(arr.data)
+            else:
+                sz += arr.size * arr.item_size
 
         measurements = []
         # TODO: does cpu() and cuda() always move the data or only once?
@@ -131,7 +134,10 @@ def assert_compression_decompression_works(req: Req) -> None:
         # get compressed size
         comp_sz = 0
         for arr in comp_tensors:
-            comp_sz += arr.size * arr.item_size
+            if isinstance(arr, CompressedData):
+                comp_sz += len(arr.data)
+            else:
+                comp_sz += arr.size * arr.item_size
 
         decomp_cache = cache_decompress(comp_tensors, num_layers, algo)
         del comp_tensors # we don't need the pointers to arrays, they are mangled

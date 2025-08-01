@@ -7,8 +7,47 @@ from nvidia import nvcomp
 import torch
 from transformers.generation.utils import DynamicCache
 
+# NOTE: Warning: I have put together gridfour, and it is not stable
+from gridfour import CompressedData, compress_float16, decompress_float16
 
-DEV_CPU='cpu'
+
+DEV_CPU = 'cpu'
+DEV_GPU = 'cuda:0'
+
+
+def cache_gridfour_decompress(list_comp: List[CompressedData], num_layers: int) -> DynamicCache:
+    # NOTE: gridfour code currently runs on CPU
+    cache = DynamicCache()
+    cache.append_new_layers(layer_idx=num_layers - 1)
+    for i, comp in enumerate(list_comp):
+        assert comp.dtype == 'float16'
+        ndarr = decompress_float16(comp)
+        tensor = torch.from_numpy(ndarr)
+        tensor = tensor.to(DEV_GPU)
+
+        # Figure out which layer it is
+        index = i // 2
+        # Figure out if it's as key or value
+        if i % 2 == 0:
+            cache.layers[index].keys = tensor
+        else:
+            cache.layers[index].values = tensor
+    return cache
+
+
+def cache_gridfour_compress(cache: DynamicCache) -> List[CompressedData]:
+    # NOTE: gridfour code currently runs on CPU
+    list_comp = []
+    tensors = cache_get_all_tensors(cache)
+    for tensor in tensors:
+        assert tensor.dtype == torch.float16
+        # NOTE: compress_float16 expects a linear array
+        tensor = tensor.flatten()
+        ndarr = tensor.to(DEV_CPU).numpy()
+        comp = compress_float16(ndarr)
+        list_comp.append(comp)
+    return list_comp
+
 
 def cache_get_all_tensors(cache: DynamicCache) -> List[torch.Tensor]:
     tensors: List[torch.Tensor] = []
@@ -48,11 +87,14 @@ def cache_move(cache: DynamicCache, dev: str) -> None:
         cache.layers[i].values = cache.layers[i].values.to(dev)
 
 
-def cache_decompress(list_comp_arr: List[nvcomp.Array], num_layers: int,
-        comp_algo: str) -> DynamicCache:
+def cache_decompress(list_comp_arr: List[nvcomp.Array|CompressedData],
+        num_layers: int, comp_algo: str) -> DynamicCache:
     """
     NOTE: Assumption is that key/value tensors are fp16
     """
+    if comp_algo == 'Gridfour':
+        return cache_gridfour_decompress(list_comp_arr, num_layers)
+
     codec = nvcomp.Codec(algorithm=comp_algo)
     cache = DynamicCache()
 
@@ -87,6 +129,9 @@ def cache_compress(cache: DynamicCache, comp_algo: str) -> List[nvcomp.Array]:
     
     This will overwrite the cache tensors, so the cache object will be invalid
     """
+    if comp_algo == 'Gridfour':
+        return cache_gridfour_compress(cache)
+
     tensors = cache_get_all_tensors(cache)
     codec = nvcomp.Codec(algorithm=comp_algo)
     list_comp_arr = []

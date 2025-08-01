@@ -12,7 +12,7 @@ from req import Req, move_model_to
 
 import cupy as cp
 
-COMPRESSION_ALGORITHMS = ["ANS", "LZ4", "Cascaded", "GDeflate"]
+COMPRESSION_ALGORITHMS = ["Gridfour", "ANS", "LZ4", "Cascaded", "GDeflate"]
 
 def main() -> None:
     with open('./prompts.txt', 'r') as f:
@@ -23,8 +23,8 @@ def main() -> None:
     # free some memory
     move_model_to('cpu')
 
-    # assert_compression_decompression_works(reqs[0])
-    # return
+    assert_compression_decompression_works(reqs[0])
+    return
 
     cp_pool = cp.get_default_memory_pool()
 
@@ -53,7 +53,6 @@ def main() -> None:
                     res[a]['measurements'][sample_index][1] * 1000)
             print('  pointers:', res[a]['pointers'])
             print()
-
 
 
 if __name__ == '__main__':
