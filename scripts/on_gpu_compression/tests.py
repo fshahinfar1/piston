@@ -1,15 +1,20 @@
 from typing import *
-import torch
-from cache_helper import *
 import time
 import os
-import os
+
+import torch
+import cupy as cp
+from nvidia import nvcomp
+
+from cache_helper import *
 from req import Req
+
 
 MAX_CONTENT_LEN: int = 2 ** 13
 DEV_GPU ='cuda:0'
 DEV_CPU ='cpu'
-COMPRESSION_ALGORITHMS = ["Gridfour", "ANS", "LZ4", "Cascaded", "GDeflate"]
+# "Gridfour", 
+COMPRESSION_ALGORITHMS = ["ANS", "LZ4", "Cascaded", "GDeflate"]
 CACHE_DIR='/mnt/farbod'
 REPEAT = 5
 
@@ -24,31 +29,12 @@ def measure_kv_cache_moving_time(req: Req) -> Dict[str, Any]:
     cache_size = cache_total_size(cache)
     # we repeat the measurement. each entry is one instance. the entry is a
     # tuple of the form (to-cpu-time, to-gpu-time).
-    time_measurements = []
-
-    for _ in range(REPEAT):
-        # to CPU
-        start = time.perf_counter()
-        cache_move(cache, DEV_CPU)
-        end = time.perf_counter()
-        to_cpu_time = end - start
-
-        torch.cuda.empty_cache()
-
-        # to GPU
-        start = time.perf_counter()
-        cache_move(cache, DEV_GPU)
-        end = time.perf_counter()
-        to_gpu_time = end - start
-
-        torch.cuda.empty_cache()
-
-        time_measurements.append((to_cpu_time, to_gpu_time))
+    time_measurements = _do_cpu_gpu_movement_exp(cache)
 
     return { 'bytes': cache_size, 'measurements': time_measurements, }
 
 
-def measure_compressed_kv_cache_moving_time(req) -> Dict[str, Any]:
+def measure_compressed_kv_cache_moving_time(req: Req) -> Dict[str, Any]:
     cache = get_cache(req)
 
     cache_size = cache_total_size(cache)
@@ -67,7 +53,6 @@ def measure_compressed_kv_cache_moving_time(req) -> Dict[str, Any]:
         end = time.perf_counter()
         comp_time = end - start
 
-
         sz = 0
         for arr in comp_tensors:
             if isinstance(arr, CompressedData):
@@ -75,33 +60,29 @@ def measure_compressed_kv_cache_moving_time(req) -> Dict[str, Any]:
             else:
                 sz += arr.size * arr.item_size
 
-        measurements = []
-        # TODO: does cpu() and cuda() always move the data or only once?
-        num_tensors = len(comp_tensors)
-        for _ in range(REPEAT):
-            start = time.perf_counter()
-            for i in range(num_tensors):
-                comp_tensors[i] = comp_tensors[i].cpu()
-            end = time.perf_counter()
-            to_cpu_time = end - start
+        if algo == 'Gridfour':
+            # GPU is not implemented yet for girdfour, skip it
+            result[algo] = {
+                    'bytes': sz,
+                    'measurements': [(0, 0)] * REPEAT,
+                    'compression_time': 0,
+                    'pointers': [],
+                    }
+            continue
 
-            torch.cuda.empty_cache()
+        using_nv_arr = False
 
-            start = time.perf_counter()
-            for i in range(num_tensors):
-                comp_tensors[i] = comp_tensors[i].cuda()
-            end = time.perf_counter()
-            to_gpu_time = end - start
+        if using_nv_arr:
+            measurements = _do_cpu_gpu_movement_exp(comp_tensors)
+            ptrs = [arr.__cuda_array_interface__['data'][0] for arr in comp_tensors]
+        else:
+            # convert nvcomp to tensors
+            # copy everything into a torch tensor in a different memory location
+            comp_tensors = [torch.tensor(arr) for arr in comp_tensors]
 
-            measurements.append((to_cpu_time, to_gpu_time))
+            measurements = _do_cpu_gpu_movement_exp(comp_tensors)
 
-            torch.cuda.empty_cache()
-
-
-        ptrs = []
-        for arr in comp_tensors:
-            t = torch.from_dlpack(arr)
-            ptrs.append(t.data_ptr())
+            ptrs = [t.data_ptr() for t in comp_tensors]
 
         result[algo] = {
                 'bytes': sz,
@@ -110,6 +91,76 @@ def measure_compressed_kv_cache_moving_time(req) -> Dict[str, Any]:
                 'pointers': ptrs,
                 }
     return result
+
+
+def move_compressed_cache_defraged(req: Req) -> None:
+    cache = get_cache(req)
+    cache_size = cache_total_size(cache)
+
+    result: Dict[str, Any] = { 'bytes': cache_size, }
+    ptrs = []
+    for t in cache_get_all_tensors(cache):
+        ptrs.append(t.data_ptr())
+    result['pointers'] = ptrs
+
+    algo = 'ANS'
+    comp_tensors = cache_compress(cache, algo)
+    sz = 0
+    cp_arrs = []
+    for arr in comp_tensors:
+        tmp = torch.tensor(arr.cuda())
+        cp_arrs.append(tmp)
+        sz = tmp.numel() * tmp.element_size()
+    del comp_tensors
+
+    measurements = _do_cpu_gpu_movement_exp(cp_arrs)
+
+    ptrs = [arr.data_ptr() for arr in cp_arrs]
+
+    result[algo] = {
+            'bytes': sz,
+            'measurements': measurements,
+            'compression_time': 0,
+            'pointers': ptrs,
+            }
+    return result
+
+
+    # # defrag compressed buffers
+    # count_arr = len(comp_tensors)
+    # num_elemnts = 0
+    # for arr in comp_tensors:
+    #     num_elemnts += arr.size
+    #     assert arr.dtype == cp.int8, 'type is: ' + str(comp_tensors[0].dtype)
+    # print(num_elemnts)
+    # contiguous_memory = cp.zeros(num_elemnts, dtype=cp.int8)
+    # new_arrs = []
+    # prev = 0
+    # for nv_arr in comp_tensors:
+    #     arr = cp.array(nv_arr, copy=False)
+    #     assert arr.dtype == cp.int8, 'type is: ' + str(comp_tensors[0].dtype)
+    #     next = prev + arr.size
+    #     # print(prev, next)
+    #     new_arr = contiguous_memory[prev:next]
+    #     assert new_arr.size == arr.size, f'{new_arr.size} vs {arr.size}'
+    #     cp.copyto(new_arr, arr)
+    #     new_nv_arr = nvcomp.as_array(new_arr)
+    #     new_arrs.append(new_nv_arr)
+    #     prev = next
+
+    # use the defragged values in the next measurements
+    # comp_tensors = new_arrs
+
+
+
+def report_compression_percent(req: Req, algo: str) -> None:
+    cache = get_cache(req)
+    cache_size = cache_total_size(cache)
+    comp_list = cache_compress(cache, algo)
+    comp_size = 0
+    for obj in comp_list:
+        comp_size += len(obj.data)
+    print(algo, ':    ', cache_size, '-->', comp_size)
 
 
 def assert_compression_decompression_works(req: Req) -> None:
@@ -182,4 +233,108 @@ def get_cache(req: Req)-> DynamicCache:
         cache = req.auto_regression(max_lenght=MAX_CONTENT_LEN)
         cache_save_to_disk(cache, file_name)
     return cache
+
+
+def _warm_up_comp_arr(comp_arr: List[nvcomp.Array]):
+    for arr in comp_arr:
+        t = torch.from_dlpack(arr.to_dlpack())
+
+        # print(t.numel(), arr.size)
+        # print(t.element_size(), arr.item_size)
+
+        # do something with the tensor
+        t += 1
+        t -= 1
+
+
+def _do_cpu_gpu_movement_exp(lst):
+    measurements = []
+
+    if isinstance(lst, DynamicCache):
+        cache = lst
+        for _ in range(REPEAT):
+
+            # to CPU
+            torch.cuda.synchronize()
+            start = time.perf_counter()
+            cache_move(cache, DEV_CPU, non_blocking=True)
+            torch.cuda.synchronize()
+            end = time.perf_counter()
+            to_cpu_time = end - start
+
+            torch.cuda.empty_cache()
+
+            # to GPU
+            torch.cuda.synchronize()
+            start = time.perf_counter()
+            cache_move(cache, DEV_GPU, non_blocking=True)
+            torch.cuda.synchronize()
+            end = time.perf_counter()
+            to_gpu_time = end - start
+
+            torch.cuda.empty_cache()
+
+            measurements.append((to_cpu_time, to_gpu_time))
+        return measurements
+
+    assert isinstance(lst, list)
+    num_arr = len(lst) 
+    if num_arr == 0:
+        return []
+
+    if isinstance(lst[0], nvcomp.Array):
+        # TODO: does cpu() and cuda() always move the data or only once?
+        for _ in range(REPEAT):
+            # sort the vecrots by pointer address to see if the order matters
+            # comp_tensors.sort(key=lambda x: x.__cuda_array_interface__['data'][0])
+            # _warm_up_comp_arr(comp_tensors)
+
+            torch.cuda.synchronize()
+            start = time.perf_counter()
+            for i in range(num_arr):
+                lst[i] = lst[i].cpu()
+            torch.cuda.synchronize()
+            end = time.perf_counter()
+            to_cpu_time = end - start
+
+            torch.cuda.empty_cache()
+
+            torch.cuda.synchronize()
+            start = time.perf_counter()
+            for i in range(num_arr):
+                lst[i] = lst[i].cuda()
+            torch.cuda.synchronize()
+            end = time.perf_counter()
+            to_gpu_time = end - start
+
+            measurements.append((to_cpu_time, to_gpu_time))
+
+            torch.cuda.empty_cache()
+    else:
+        assert isinstance(lst[0], torch.Tensor)
+        for _ in range(REPEAT):
+
+            torch.cuda.synchronize()
+            start = time.perf_counter()
+            for i in range(num_arr):
+                lst[i] = lst[i].to(DEV_CPU, non_blocking=True)
+            torch.cuda.synchronize()
+            end = time.perf_counter()
+            to_cpu_time = end - start
+
+            torch.cuda.empty_cache()
+
+            torch.cuda.synchronize()
+            start = time.perf_counter()
+            for i in range(num_arr):
+                lst[i] = lst[i].to(DEV_GPU, non_blocking=True)
+            torch.cuda.synchronize()
+            end = time.perf_counter()
+            to_gpu_time = end - start
+
+            measurements.append((to_cpu_time, to_gpu_time))
+
+            torch.cuda.empty_cache()
+    
+    return measurements
 

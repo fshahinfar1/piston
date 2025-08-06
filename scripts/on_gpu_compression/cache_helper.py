@@ -1,7 +1,7 @@
 from typing import *
 
 import numpy as np
-import cupy as cp
+# import cupy as cp
 from nvidia import nvcomp
 
 import torch
@@ -13,6 +13,38 @@ from gridfour import CompressedData, compress_float16, decompress_float16
 
 DEV_CPU = 'cpu'
 DEV_GPU = 'cuda:0'
+
+
+def cache_defrag(cache: DynamicCache) -> DynamicCache:
+    num_layers = len(cache.layers)
+    new_cache = DynamicCache()
+    new_cache.append_new_layers(layer_idx=num_layers-1)
+
+    tensors = cache_get_all_tensors(cache)
+    assert tensors[0].dtype == torch.float16
+
+    # Allocate memory
+    count_tensors = len(tensors)
+    total_elements = sum([t.numel() for t in tensors])
+    contiguous_tensor = torch.zeros(total_elements, dtype=torch.float16)
+
+    # NOTE: tensor_split must return a list of views into the
+    # contiguous_tensor memory
+    new_tensors = torch.tensor_split(contiguous_tensor, count_tensors)
+
+    # copy data and fill new cache
+    for i, (new_t, t) in enumerate(zip(new_tensors, tensors)):
+        new_t.copy_(t)
+
+        # Figure out which layer it is
+        index = i // 2
+        # Figure out if it's as key or value
+        if i % 2 == 0:
+            new_cache.layers[index].keys = new_t
+        else:
+            new_cache.layers[index].values = new_t
+
+    return new_cache
 
 
 def cache_gridfour_decompress(list_comp: List[CompressedData], num_layers: int) -> DynamicCache:
@@ -67,7 +99,8 @@ def cache_save_to_disk(cache: DynamicCache, file_name: str) -> None:
 
 
 def cache_load_from_disk(file_name: str) -> DynamicCache:
-    loaded: Dict[str, List[torch.Tensor]] = torch.load(file_name, map_location=DEV_CPU)
+    loaded: Dict[str, List[torch.Tensor]] = torch.load(file_name,
+                                                    map_location=DEV_CPU)
     cache = DynamicCache()
     num_layers = len(loaded['key_cache'])
     cache.append_new_layers(layer_idx=num_layers-1)
@@ -77,14 +110,14 @@ def cache_load_from_disk(file_name: str) -> DynamicCache:
     return cache
 
 
-def cache_move(cache: DynamicCache, dev: str) -> None:
+def cache_move(cache: DynamicCache, dev: str, non_blocking=False) -> None:
     """
     move tensors of a cache from GPU to CPU
     """
     num_layers = len(cache.layers)
     for i in range(num_layers):
-        cache.layers[i].keys = cache.layers[i].keys.to(dev)
-        cache.layers[i].values = cache.layers[i].values.to(dev)
+        cache.layers[i].keys = cache.layers[i].keys.to(dev, non_blocking=non_blocking)
+        cache.layers[i].values = cache.layers[i].values.to(dev, non_blocking=non_blocking)
 
 
 def cache_decompress(list_comp_arr: List[nvcomp.Array|CompressedData],
@@ -105,10 +138,10 @@ def cache_decompress(list_comp_arr: List[nvcomp.Array|CompressedData],
     for i, arr in enumerate(list_comp_arr):
         # arr = arr.cuda()
         decomp = codec.decode(arr)# .cuda()
-        cp_arr = cp.from_dlpack(decomp.to_dlpack()).view(cp.float16)
-        tensor = torch.tensor(cp_arr) # make a copy
-        del cp_arr
-        del decomp
+        # cp_arr = cp.from_dlpack(decomp.to_dlpack()).view(cp.float16)
+        tensor = torch.tensor(decomp).view(torch.float16) # make a copy
+        # del cp_arr
+        # del decomp
         # mempool.free_all_blocks()
 
         # Figure out which layer it is
@@ -137,12 +170,12 @@ def cache_compress(cache: DynamicCache, comp_algo: str) -> List[nvcomp.Array]:
     list_comp_arr = []
     for tensor in tensors:
         assert tensor.dtype == torch.float16, 'compression/decompression assumes and expects tensors of type fp16'
-        arr = cp.from_dlpack(tensor).view(cp.uint8)
-        comp = codec.encode(nvcomp.from_dlpack(arr))
+        arr = tensor.view(torch.int8)
+        comp = codec.encode(arr)
         list_comp_arr.append(comp)
 
-    mempool = cp.get_default_memory_pool()
-    mempool.free_all_blocks()
+    # mempool = cp.get_default_memory_pool()
+    # mempool.free_all_blocks()
 
     return list_comp_arr
 
