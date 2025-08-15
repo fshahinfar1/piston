@@ -1,6 +1,13 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.utils import DynamicCache
+from transformers.modeling_outputs import BaseModelOutputWithPast
+
+# TODO: FIXME: I have changed the library to expose this
+from transformers.masking_utils import (
+        create_causal_mask,
+        create_sliding_window_causal_mask
+        )
 
 
 class SubModel:
@@ -15,6 +22,10 @@ class SubModel:
         # Only the last stage will have the norm
         self.norm = None
 
+        # Not sure about this
+        self.config = None
+        self.rotary_emb = None
+
     def ready(self):
         for layer in self.layers:
             layer.to(self.device)
@@ -26,74 +37,62 @@ class SubModel:
             self.norm.to(self.device)
 
     def forward(self, input_ids, use_cache=None, past_key_values=None):
-        print(input_ids.device, self.device)
-        assert(input_ids.device == self.device)
-        attention_mask = None
-        output_attentions = None
+        position_ids = None
         cache_position = None
+        attention_mask = None
 
-        batch_size, seq_length = input_ids.shape[:2]
-        past_key_values_length = 0
+        # First stage
+        inputs_embeds = input_ids
+        if self.embed_tokens is not None:
+            inputs_embeds = self.embed_tokens(input_ids)
 
-        if use_cache:
-            if past_key_values is None:
-                past_key_values = DynamicCache()
-            assert isinstance(past_key_values, DynamicCache)
+        if use_cache and past_key_values is None:
+            past_key_values = DynamicCache()
 
         if cache_position is None:
             past_seen_tokens = past_key_values.get_seq_length() if past_key_values is not None else 0
             cache_position = torch.arange(
-                    past_seen_tokens, past_seen_tokens + seq_length,
-                    device=self.device)
+                past_seen_tokens,
+                past_seen_tokens + inputs_embeds.shape[1],
+                device=self.device
+            )
 
-        position_ids = cache_position.unsqueeze(0)
+        if position_ids is None:
+            position_ids = cache_position.unsqueeze(0)
 
-        if self.embed_tokens:
-            inputs_embeds = self.embed_tokens(input_ids)
-
-        if attention_mask is not None and self._attn_implementation == "flash_attention_2" and use_cache:
-            is_padding_right = attention_mask[:, -1].sum().item() != batch_size
-            if is_padding_right:
-                raise ValueError(
-                    "You are attempting to perform batched generation with padding_side='right'"
-                    " this may lead to unexpected behaviour for Flash Attention version of Phi3. Make sure to "
-                    " call `tokenizer.padding_side  = 'left'` before tokenizing the input. "
-                )
-
-        if self._attn_implementation == "flash_attention_2":
-            # 2d mask is passed through the layers
-            attention_mask = attention_mask if (attention_mask is not None and 0 in attention_mask) else None
-        else:
-            # 4d mask is passed through the layers
-            raise RuntimeError('not implemented')
-            # attention_mask = _prepare_4d_causal_attention_mask(
-            #     attention_mask,
-            #     (batch_size, seq_length),
-            #     inputs_embeds,
-            #     past_key_values_length,
-            #     sliding_window=self.config.sliding_window,
-            # )
+        mask_function = create_causal_mask if self.config.sliding_window is None else create_sliding_window_causal_mask
+        causal_mask = mask_function(
+            config=self.config,
+            input_embeds=inputs_embeds,
+            attention_mask=attention_mask,
+            cache_position=cache_position,
+            past_key_values=past_key_values,
+            position_ids=position_ids,
+        )
 
         hidden_states = inputs_embeds
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
         for decoder_layer in self.layers:
-            layer_outputs = decoder_layer(
-                    hidden_states,
-                    attention_mask=attention_mask,
-                    position_ids=position_ids,
-                    past_key_value=past_key_values,
-                    output_attentions=output_attentions,
-                    use_cache=use_cache,
-                    cache_position=cache_position,
-                    position_embeddings=position_embeddings,
-                    )
-            hidden_states = layer_outputs[0]
+            hidden_states = decoder_layer(
+                hidden_states,
+                attention_mask=causal_mask,
+                position_ids=position_ids,
+                past_key_value=past_key_values,
+                use_cache=use_cache,
+                cache_position=cache_position,
+                position_embeddings=position_embeddings,
+            )
 
-        if self.norm:
-            hidden_state = self.norm(hidden_state)
+        # Last stage
+        if self.norm is not None:
+            hidden_states = self.norm(hidden_states)
 
-        return (hidden_states, past_key_values)
+        out = BaseModelOutputWithPast(
+            last_hidden_state=hidden_states,
+            past_key_values=past_key_values if use_cache else None,
+        )
+        return out
 
 
 class Replica:
@@ -108,8 +107,8 @@ class Replica:
         # TODO: is this not on a GPU?
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-        layers = model.model.layers
-        num_layers = len(layers)
+        num_layers = model.model.config.num_hidden_layers
+        layers = model.model.layers[:num_layers]
         #print('Number of', num_layers)
         stage_num_layers = num_layers // num_stages
 
@@ -123,11 +122,8 @@ class Replica:
             next = prev + stage_num_layers
             s.layers = layers[prev:next]
 
-            # TODO: what is happening here?
-            # not sure about this
-            # s._attn_implementation = model.model._attn_implementation
-            s._attn_implementation = "flash_attention_2"
-
+            # TODO: I am not sure about these
+            s.config = model.model.config
             s.rotary_emb = model.model.rotary_emb
 
         # the first stage will apply the embed tokens
@@ -144,6 +140,8 @@ class Replica:
             # Move the submodels to their device
             s.ready()
             # input('continue? ')
+        # move the lm_head to the last stage's device
+        self.lm_head = self.lm_head.to(self.stages[-1].device)
 
 
 class Request:
@@ -151,11 +149,10 @@ class Request:
         # prompt string
         self.prompt = prompt
         # Tensor of generated tokens
-        self.generated = torch.tensor([], device='cpu')
+        self.generated = torch.tensor([], dtype=torch.int, device='cpu')
         # next token
         self.next_token_ids = None
         # KV Cache of each stage
         self.stage_cache = {}
         
-
 

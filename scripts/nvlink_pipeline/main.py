@@ -2,8 +2,9 @@ from typing import *
 import os
 import time
 
-import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.utils import DynamicCache
+import torch
 
 from entities import Request, Replica
 
@@ -34,26 +35,26 @@ def cache_load_from_disk(file_name: str) -> DynamicCache:
 
 
 def do_one_iteration(req, replica):
-    print('*' * 6)
     hidden_state = req.next_token_ids
 
-    for stage in replica.stages:
-        cache = req.stage_cache.get(stage.stage_index)
+    with torch.no_grad():
+        for stage in replica.stages:
+            cache = req.stage_cache[0]
 
-        # bring the input/hidden state to device
-        hidden_state = hidden_state.to(stage.device, non_blocking=True)
+            # bring the input/hidden state to device
+            hidden_state = hidden_state.to(stage.device, non_blocking=True)
 
-        # TODO: can we do something here to use the time?
+            # TODO: can we do something here to use the time?
 
-        # wait for data transfer to finish
-        torch.cuda.synchronize()
+            # wait for data transfer to finish
+            torch.cuda.synchronize()
 
-        hidden_state, next_cache = stage.forward(hidden_state, use_cache=True,
-                past_key_values=cache)
+            out = stage.forward(hidden_state, use_cache=True,
+                    past_key_values=cache)
 
-        req.stage_cache[stage.stage_index] = next_cache
+            hidden_state = out.last_hidden_state
 
-    logits = replica.lm_head(hidden_state)
+    logits = replica.lm_head(out.last_hidden_state)
     logits = logits.float()
     next_token_logits = logits[:, -1, :]
     next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
@@ -86,23 +87,73 @@ def do_decode(req, replica, max_iter=32):
         if next_token.item() == replica.tokenizer.eos_token_id:
             break
 
+        torch.cuda.empty_cache()
+
 
 def main():
     req = Request(prompt='write 2 page essay on importance of sunshine')
 
     model_name = 'microsoft/Phi-3.5-mini-instruct'
-    replica = Replica(model_name, num_stages=1, device_list=DEV_GPU_)
+    replica = Replica(model_name, num_stages=2, device_list=DEV_GPU_)
 
+    for stage in replica.stages:
+        req.stage_cache[stage.stage_index] = DynamicCache(device=stage.device)
     do_prefill(req, replica)
 
-    do_decode(req, replica, max_iter=32)
-
+    do_decode(req, replica, max_iter=2048)
 
     final_text = replica.tokenizer.decode(req.generated[0],
             skip_special_tokens=True)
     print(final_text)
 
 
+def test():
+    """
+    just to test what a normal execution of model produces. Usuful to see how
+    much memory is consumed.
+    """
+    model_name = 'microsoft/Phi-3.5-mini-instruct'
+    prompt = 'write 2 page essay on importance of sunshine'
+    model = AutoModelForCausalLM.from_pretrained(model_name,
+            torch_dtype=torch.float16, device_map='cuda:0',
+            local_files_only=True)
+    model.eval()
+    tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=True)
+    model.to('cuda:0')
+
+    inputs = tokenizer(prompt, return_tensors='pt')
+    input_ids = inputs['input_ids'].to('cuda:0')
+
+    with torch.no_grad():
+        output = model(input_ids=input_ids, use_cache=True)
+        past_key_values = output.past_key_values
+        next_token_logits = output.logits[:, -1, :]
+
+    generated = input_ids
+    next_token_logits = next_token_logits
+
+    cache = DynamicCache.from_legacy_cache(past_key_values)
+    past_key_values = cache
+
+    for _ in range(256):
+        next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+
+        if next_token.item() == tokenizer.eos_token_id:
+            break
+
+        generated = torch.cat([generated, next_token], dim=-1)
+        with torch.no_grad():
+            output = model(input_ids=next_token,
+                    past_key_values=past_key_values,
+                    use_cache=True)
+            past_key_values = output.past_key_values
+            next_token_logits = output.logits[:, -1, :]
+
+    final_text = tokenizer.decode(generated[0], skip_special_tokens=True)
+    print(final_text)
+
+
 if __name__ == '__main__':
+    # test()
     main()
 
