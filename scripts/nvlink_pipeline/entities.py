@@ -1,3 +1,4 @@
+import time
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.generation.utils import DynamicCache
@@ -10,7 +11,20 @@ from transformers.masking_utils import (
         )
 
 
+class ExecutionStatistics:
+    def __init__(self, num_stages):
+        self.stage_exec_times = {
+            i: [] for i in range(num_stages)
+        }
+        self.hidden_state_transfer_times = {
+            i: [] for i in range(num_stages)
+        }
+
+
 class SubModel:
+    """
+    This class abstacts a single stage of the pipeline.
+    """
     def __init__(self, stage):
         self.stage_index = stage
         self.device = torch.device('cpu')
@@ -98,19 +112,21 @@ class SubModel:
 class Replica:
     def __init__(self, model_name, num_stages, device_list):
         model = AutoModelForCausalLM.from_pretrained(model_name,
-                torch_dtype=torch.float16, device_map='cpu')
+                torch_dtype=torch.float16, device_map='cpu', local_files_only=True)
         model.eval()
 
         assert num_stages > 0
         assert len(device_list) >= num_stages
 
         # TODO: is this not on a GPU?
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=True)
 
         num_layers = model.model.config.num_hidden_layers
         layers = model.model.layers[:num_layers]
         #print('Number of', num_layers)
         stage_num_layers = num_layers // num_stages
+
+        self.config = model.model.config
 
         # prepare stages
         self.stages = [SubModel(i) for i in range(num_stages)]
@@ -123,7 +139,7 @@ class Replica:
             s.layers = layers[prev:next]
 
             # TODO: I am not sure about these
-            s.config = model.model.config
+            s.config = self.config
             s.rotary_emb = model.model.rotary_emb
 
         # the first stage will apply the embed tokens
@@ -142,17 +158,70 @@ class Replica:
             # input('continue? ')
         # move the lm_head to the last stage's device
         self.lm_head = self.lm_head.to(self.stages[-1].device)
+    
+    def get_max_kv_cache_size(self, max_length):
+        bytes = (2 * 2 * self.config.num_key_value_heads * self.config.hidden_size * max_length)
+        return bytes
+    
+    def do_one_iteration(self, req, stats=None):
+        """
+        Do one full iteration on the request through all the stages of the pipeline.
+        This will return the next token.
+        The request must have gone through tokenization phase and have the next_token_ids set to the input for the first stage.
+        """
+        hidden_state = req.next_token_ids
+
+        with torch.no_grad():
+            for stage in self.stages:
+                cache = req.cache
+
+                start = time.time()
+                # bring the input/hidden state to device
+                hidden_state = hidden_state.to(stage.device, non_blocking=True)
+
+                # TODO: can we do something here to use the time?
+
+                # wait for data transfer to finish
+                torch.cuda.synchronize()
+                duration = (time.time() - start) * 1000
+                if stats:
+                    stats.hidden_state_transfer_times[stage.stage_index].append(duration)
+
+                start = time.time()
+                out = stage.forward(hidden_state, use_cache=True,
+                        past_key_values=cache)
+                duration = (time.time() - start) * 1000
+                if stats:
+                    stats.stage_exec_times[stage.stage_index].append(duration)
+
+                hidden_state = out.last_hidden_state
+
+        logits = self.lm_head(out.last_hidden_state)
+        logits = logits.float()
+        next_token_logits = logits[:, -1, :]
+        next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+        return next_token
 
 
 class Request:
     def __init__(self, prompt):
         # prompt string
         self.prompt = prompt
-        # Tensor of generated tokens
-        self.generated = torch.tensor([], dtype=torch.int, device='cpu')
+
+        # List of tokens
+        # NOTICE: not all tokens are on the same device!
+        self.generated = []
+
         # next token
         self.next_token_ids = None
-        # KV Cache of each stage
-        self.stage_cache = {}
-        
 
+        # KV Cache of each stage
+        self.cache = DynamicCache()
+    
+    def move_to(self, device_map, non_blocking=False):
+        cache = self.cache
+        num_layers = len(cache.layers)
+        for i in range(num_layers):
+            dev = device_map[i]
+            cache.layers[i].keys = cache.layers[i].keys.to(dev, non_blocking=non_blocking)
+            cache.layers[i].values = cache.layers[i].values.to(dev, non_blocking=non_blocking)
