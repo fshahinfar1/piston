@@ -7,44 +7,10 @@ from transformers.generation.utils import DynamicCache
 import torch
 
 from entities import Request, Replica, ExecutionStatistics
+from prefill_decode import do_prefill
+from simple_pipeline import SimplePipeline
 
-MAX_LENGTH = 2048
-NUM_DEVICES = 1
-NUM_STAGES = 3
-DEV_GPU_ = [torch.device(f'cuda:{i % NUM_DEVICES}') for i in range(NUM_STAGES)]
-DEV_CPU = torch.device('cpu')
-
-
-def do_prefill(req, replica):
-    # tokenize
-    inputs = replica.tokenizer(req.prompt, return_tensors='pt')
-    req.next_token_ids = inputs['input_ids']
-    # req.generated = torch.cat([req.generated, req.next_token_ids], dim=-1)
-    req.generated.append(req.next_token_ids)
-
-    next_token = replica.do_one_iteration(req)
-    next_token = next_token.cpu()
-
-    # req.generated = torch.cat([req.generated, next_token], dim=-1)
-    req.next_token_ids = next_token
-    req.generated.append(req.next_token_ids)
-
-
-def do_decode(req, replica, stat, max_iter=32):
-    for _ in range(max_iter):
-        next_token = replica.do_one_iteration(req, stat)
-
-        # TODO: maybe avoid moving to CPU? or copy to CPU and other GPU async
-        # next_token = next_token.cpu()
-        # req.generated = torch.cat([req.generated, next_token], dim=-1)
-        req.generated.append(next_token)
-
-        req.next_token_ids = next_token
-
-        if next_token.item() == replica.tokenizer.eos_token_id:
-            break
-        
-        # torch.cuda.empty_cache()
+from constants import *
 
 
 def stats(lst: List[float]):
@@ -88,96 +54,37 @@ def load_pile_of_request(pile_size):
     return requests
 
 
-def get_batch_size(replica):
-    total_gpu_mem = 0
-    for gpu_index in range(NUM_DEVICES):
-        t = torch.cuda.get_device_properties(gpu_index).total_memory * 0.9
-        r = torch.cuda.memory_reserved(gpu_index)
-        a = torch.cuda.memory_allocated(gpu_index)
-        print('GPU', gpu_index, 'total:', t, 'allocated', a)
-        total_gpu_mem += t - a
-    
-    max_kv_size = replica.get_max_kv_cache_size(MAX_LENGTH)
-    num_req = int(total_gpu_mem // max_kv_size)
-    return num_req
-
-
-def print_output(req):
-    # Actually generate the text
-    # generated = torch.cat([t.to(DEV_CPU) for t in req.generated], dim=-1)
-    # final_text = replica.tokenizer.decode(generated[0], skip_special_tokens=True)
-    # print(final_text)
-    return
-
-
-# def batch_inputs(inputs_list, pad_token_id):
-#     # Assume inputs_list = list of tokenized input tensors, e.g. [tensor([1,2,3]), tensor([4,5])]
-#     pad_token_id = replica.tokenizer.pad_token_id
-#     max_len = max(x.shape[0] for x in inputs_list)
-
-#     # Pad each tensor and create attention mask
-#     input_ids = []
-#     attention_masks = []
-#     for ids in inputs_list:
-#         pad_len = max_len - ids.shape
-#         padded = torch.cat([ids, torch.full((pad_len,), pad_token_id, dtype=ids.dtype)])
-#         mask = torch.cat([torch.ones(ids.shape), torch.zeros(pad_len)])
-#         input_ids.append(padded)
-#         attention_masks.append(mask)
-
-#     batch_input_ids = torch.stack(input_ids)       # shape: [batch_size, max_seq_len]
-#     batch_attention_mask = torch.stack(attention_masks)  # shape: [batch_size, max_seq_len]
-
-
 def main():
-    pile_size = 54
-    requests = load_pile_of_request(pile_size)
-
+    pile_size = 8
     num_stages = 2
     model_name = 'microsoft/Phi-3.5-mini-instruct'
-    replica = Replica(model_name, num_stages=num_stages, device_list=DEV_GPU_)
 
-    batch_size = get_batch_size(replica)
-    print('Batch size is:', batch_size)
+    # TODO: for experimenting reasons I have limited the KV-Cache size to 3 GB
+    available_memory = 3*GB
 
-    run_queue = []
-    # Do prefill of all request in advance
-    for i, req in enumerate(requests):
-        do_prefill(req, replica)
-        count = len(req.cache.layers)
-        dev_map = [DEV_CPU] * count
-        req.move_to(dev_map, non_blocking=True)
-        run_queue.append(req)
+    mode = 'simple'
 
-    stat = ExecutionStatistics(len(replica.stages))
+    if mode == 'simple':
+        pipeline = SimplePipeline(model_name, num_stages, DEV_GPU_,
+            max_length=MAX_LENGTH, available_memory=available_memory)
+    elif mode == 'swapping':
+        # pipeline = SwappingPipeline(model_name, num_stages, DEV_GPU_, batch_size)
+        pass
+    else:
+        raise RuntimeError('Unexpected value for experiment mode')
 
-    while run_queue:
-        # dequeue a batch of requests
-        batch_requests = run_queue[:batch_size]
-        del run_queue[:batch_size]
+    print('Batch size is:', pipeline.batch_size)
 
-        # move batch of requests to GPUs
-        for req in batch_requests:
-            count = len(req.cache.layers)
-            r = count // num_stages
-            dev_map = [DEV_GPU_[i // r] for i in range(count)]
-            req.move_to(dev_map)
-
-        start_time = time.time()
-        for req in batch_requests:
-            do_decode(req, replica, stat, max_iter=MAX_LENGTH)
-            print_output(req)
-        end_time = time.time()
-        print(f"Decoding execution time: {end_time - start_time:.2f} seconds")
-        #  report_statistics(stat)
-
-        # free memory of requests
-        for req in batch_requests:
-            req.cache = DynamicCache()
-            req.generated = []
-            req.next_token = None
-        torch.cuda.empty_cache()
-
+    for req in load_pile_of_request(pile_size):
+        pipeline.add_request(req)
+    
+    # pipeline.prepare_run_queue()
+    pipeline.prepare_run_queue_batched()
+    
+    start_time = time.time()
+    pipeline.process_requests()
+    end_time = time.time()
+    print(f"Time to process {pile_size} requests: {end_time - start_time:.2f} seconds")
     
 
 if __name__ == '__main__':

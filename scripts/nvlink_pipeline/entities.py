@@ -1,3 +1,4 @@
+from typing import *
 import time
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -50,10 +51,9 @@ class SubModel:
         if self.norm:
             self.norm.to(self.device)
 
-    def forward(self, input_ids, use_cache=None, past_key_values=None):
+    def forward(self, input_ids, attention_mask=None, use_cache=None, past_key_values=None):
         position_ids = None
         cache_position = None
-        attention_mask = None
 
         # First stage
         inputs_embeds = input_ids
@@ -159,11 +159,11 @@ class Replica:
         # move the lm_head to the last stage's device
         self.lm_head = self.lm_head.to(self.stages[-1].device)
     
-    def get_max_kv_cache_size(self, max_length):
+    def get_max_kv_cache_size(self, max_length) -> int:
         bytes = (2 * 2 * self.config.num_key_value_heads * self.config.hidden_size * max_length)
         return bytes
     
-    def do_one_iteration(self, req, stats=None):
+    def do_one_iteration(self, req, stats=None) -> torch.Tensor:
         """
         Do one full iteration on the request through all the stages of the pipeline.
         This will return the next token.
@@ -188,8 +188,8 @@ class Replica:
                     stats.hidden_state_transfer_times[stage.stage_index].append(duration)
 
                 start = time.time()
-                out = stage.forward(hidden_state, use_cache=True,
-                        past_key_values=cache)
+                out = stage.forward(hidden_state, attention_mask=req.attention_mask,
+                                        use_cache=True, past_key_values=cache)
                 duration = (time.time() - start) * 1000
                 if stats:
                     stats.stage_exec_times[stage.stage_index].append(duration)
@@ -204,16 +204,17 @@ class Replica:
 
 
 class Request:
-    def __init__(self, prompt):
+    def __init__(self, prompt: str):
         # prompt string
         self.prompt = prompt
 
         # List of tokens
         # NOTICE: not all tokens are on the same device!
-        self.generated = []
+        self.generated: List[torch.Tensor] = []
 
         # next token
         self.next_token_ids = None
+        self.attention_mask = None
 
         # KV Cache of each stage
         self.cache = DynamicCache()
