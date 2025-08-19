@@ -176,7 +176,7 @@ class Replica:
                 # TODO: can we do something here to use the time?
 
                 # wait for data transfer to finish
-                torch.cuda.synchronize()
+                torch.cuda.synchronize(stage.device)
                 duration = (time.time() - start) * 1000
                 if stats:
                     stats.hidden_state_transfer_times[stage.stage_index].append(duration)
@@ -184,6 +184,8 @@ class Replica:
                 start = time.time()
                 out = stage.forward(hidden_state, attention_mask=req.attention_mask,
                                         use_cache=True, past_key_values=cache)
+                # wait until all computation on this device is over
+                torch.cuda.synchronize(stage.device)
                 duration = (time.time() - start) * 1000
                 if stats:
                     stats.stage_exec_times[stage.stage_index].append(duration)
