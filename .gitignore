@@ -3,3 +3,6 @@ tags
 tags.*
 .dmypy.json
 .mypy_*
+# SLURM outputs
+stderr.txt
+stdout.txt

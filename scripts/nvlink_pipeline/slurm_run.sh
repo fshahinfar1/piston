@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=8              # CPU cores allocated; tune as needed
 #SBATCH --gres=gpu:3                   # request two GPUs
 #SBATCH --mem=16G                      # request RAM, change xx as needed
-#SBATCH --time=00:10:00                # e.g. ten minutes of runtime
+#SBATCH --time=00:40:00                # e.g. ten minutes of runtime
 #SBATCH --output=output/stdout.txt
 #SBATCH --error=output/stderr.txt
 
@@ -15,7 +15,7 @@ module load cuda/12.2
 module load python/3.11.7
 
 # NOTE: $HOME is very slow < 300MB/s $SCRATCH should be the fastest but is temporary
-export HF_HOME="$SCRATCH/huggingface"
+export HF_HOME="$WORK/$USER/huggingface"
 
 # VNEV
 VENV_DIR=$HOME/my_venv

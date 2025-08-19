@@ -25,18 +25,14 @@ def load_pile_of_request(pile_size):
 
 
 def main():
-    pile_size = 8
     num_stages = 2
     model_name = 'microsoft/Phi-3.5-mini-instruct'
-
-    # TODO: for experimenting reasons I have limited the KV-Cache size to 3 GB
-    available_memory = 3*GB
 
     mode = 'simple'
 
     if mode == 'simple':
         pipeline = SimplePipeline(model_name, num_stages, DEV_GPU_,
-            max_length=MAX_LENGTH, available_memory=available_memory)
+            max_length=MAX_LENGTH, available_memory=AVAILABLE_MEMORY)
     elif mode == 'swapping':
         # pipeline = SwappingPipeline(model_name, num_stages, DEV_GPU_, batch_size)
         pass
@@ -45,7 +41,7 @@ def main():
 
     print('Batch size is:', pipeline.batch_size)
 
-    for req in load_pile_of_request(pile_size):
+    for req in load_pile_of_request(PILE_SIZE):
         pipeline.add_request(req)
     
     # pipeline.prepare_run_queue()
@@ -54,7 +50,7 @@ def main():
     start_time = time.time()
     pipeline.process_requests()
     end_time = time.time()
-    print(f"Time to process {pile_size} requests: {end_time - start_time:.2f} seconds")
+    print(f"Time to process {PILE_SIZE} requests: {end_time - start_time:.2f} seconds")
     
 
 if __name__ == '__main__':

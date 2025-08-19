@@ -180,6 +180,8 @@ class Replica:
                 duration = (time.time() - start) * 1000
                 if stats:
                     stats.hidden_state_transfer_times[stage.stage_index].append(duration)
+                    sz = hidden_state.numel() * hidden_state.element_size()
+                    stats.hidden_state_transfer_size[stage.stage_index].append(sz)
 
                 start = time.time()
                 out = stage.forward(hidden_state, attention_mask=req.attention_mask,

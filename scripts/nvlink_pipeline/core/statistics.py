@@ -19,6 +19,9 @@ class ExecutionStatistics:
         self.hidden_state_transfer_times: Dict[int, List[int]] = {
             i: [] for i in range(num_stages)
         }
+        self.hidden_state_transfer_size: Dict[int, List[int]] = {
+            i: [] for i in range(num_stages)
+        }
 
     def report(self) -> None:
         num_stages = len(self.stage_exec_times)
@@ -27,8 +30,14 @@ class ExecutionStatistics:
             # mid and std and avg of list
             mean, std, mid, _max, count = stats(exec_times)
             print(f"Stage {stage_index} execution times:")
-            print(f"\t\tmean={mean:.4f}, std={std:.4f}, mid={mid:.4f}, max={_max:.4f}, count={count}")
+            print(f"\t\tmean={mean:.4f} ms, std={std:.4f}, mid={mid:.4f}, max={_max:.4f}, count={count}")
         for stage_index, transfer_times in self.hidden_state_transfer_times.items():
             mean, std, mid, _max, count = stats(transfer_times)
             print(f"hidden state transfer from stage {(stage_index - 1) % num_stages} to stage {stage_index}:")
-            print(f"\t\tmean={mean:.4f}, std={std:.4f}, mid={mid:.4f}, max={_max:.4f}, count={count}")
+            print(f"\t\tmean={mean:.4f} ms, std={std:.4f}, mid={mid:.4f}, max={_max:.4f}, count={count}")
+
+            transfer_sizes = self.hidden_state_transfer_size[stage_index]
+            # dur (ms) and sz (B), transfer_rates (GB/s)
+            transfer_rates = [sz / 1024 ** 2 / dur for sz, dur in zip(transfer_sizes, transfer_times)]
+            mean, std, mid, _max, count = stats(transfer_rates)
+            print(f"\t\tmean={mean:.4f} GB/s, std={std:.4f}, mid={mid:.4f}, max={_max:.4f}, count={count}")
