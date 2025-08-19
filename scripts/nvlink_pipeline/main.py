@@ -1,40 +1,10 @@
 from typing import *
-import os
 import time
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from transformers.generation.utils import DynamicCache
-import torch
-
-from entities import Request, Replica, ExecutionStatistics
-from prefill_decode import do_prefill
-from simple_pipeline import SimplePipeline
+from core.entities import Request
+from core.simple_pipeline import SimplePipeline
 
 from constants import *
-
-
-def stats(lst: List[float]):
-    if not lst:
-        return "No data"
-    S = sorted(lst)
-    mean = sum(S) / len(S)
-    std = (sum((x - mean) ** 2 for x in S) / len(S)) ** 0.5
-    mid = S[len(S) // 2] if len(S) % 2 == 1 else (S[len(S) // 2 - 1] + S[len(S) // 2]) / 2
-    return mean, std, mid, S[-1], len(S)
-
-
-def report_statistics(stat: ExecutionStatistics):
-    num_stages = len(stat.stage_exec_times)
-    print("Execution Statistics:")
-    for stage_index, exec_times in stat.stage_exec_times.items():
-        # mid and std and avg of list
-        mean, std, mid, _max, count = stats(exec_times)
-        print(f"Stage {stage_index} execution times:")
-        print(f"\t\tmean={mean:.4f}, std={std:.4f}, mid={mid:.4f}, max={_max:.4f}, count={count}")
-    for stage_index, transfer_times in stat.hidden_state_transfer_times.items():
-        mean, std, mid, _max, count = stats(transfer_times)
-        print(f"hidden state transfer from stage {(stage_index - 1) % num_stages} to stage {stage_index}:")
-        print(f"\t\tmean={mean:.4f}, std={std:.4f}, mid={mid:.4f}, max={_max:.4f}, count={count}")
 
 
 def load_pile_of_request(pile_size):

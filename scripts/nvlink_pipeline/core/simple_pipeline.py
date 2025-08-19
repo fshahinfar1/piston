@@ -1,10 +1,11 @@
 from typing import *
 import time
 import torch
-from entities import Request, Replica, ExecutionStatistics
-from prefill_decode import do_prefill, do_batch_prefill, do_decode, get_batch_size, print_output
 from transformers.generation.utils import DynamicCache
 
+from .entities import Request, Replica
+from .statistics import ExecutionStatistics
+from .prefill_decode import do_prefill, do_batch_prefill, do_decode, get_batch_size, print_output
 from constants import *
 
 
@@ -55,8 +56,6 @@ class SimplePipeline:
         if not self.run_queue:
             return
 
-        stat = ExecutionStatistics(self.num_stages)
-
         # How to split KV cache between stages
         count = len(self.run_queue[0].cache.layers)
         r = count // self.num_stages
@@ -68,10 +67,11 @@ class SimplePipeline:
             req.move_to(dev_map, non_blocking=True)
             torch.cuda.synchronize()
 
+            stat = ExecutionStatistics(self.num_stages)
             do_decode(req, self.replica, stat, max_iter=self.max_length)
             print_output(req)
 
-            #  report_statistics(stat)
+            stat.report()
 
             # free memory of requests
             req.cache = DynamicCache()

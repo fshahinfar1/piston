@@ -1,5 +1,5 @@
 from typing import *
-from entities import Request, Replica
+from .entities import Request, Replica
 
 
 def do_prefill(req, replica):

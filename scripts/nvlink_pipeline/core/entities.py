@@ -11,15 +11,7 @@ from transformers.masking_utils import (
         create_sliding_window_causal_mask
         )
 
-
-class ExecutionStatistics:
-    def __init__(self, num_stages):
-        self.stage_exec_times = {
-            i: [] for i in range(num_stages)
-        }
-        self.hidden_state_transfer_times = {
-            i: [] for i in range(num_stages)
-        }
+from constants import LOCAL_FILE_ONLY
 
 
 class SubModel:
@@ -41,7 +33,7 @@ class SubModel:
         self.config = None
         self.rotary_emb = None
 
-    def ready(self):
+    def ready(self) -> None:
         for layer in self.layers:
             layer.to(self.device)
 
@@ -112,14 +104,16 @@ class SubModel:
 class Replica:
     def __init__(self, model_name, num_stages, device_list):
         model = AutoModelForCausalLM.from_pretrained(model_name,
-                torch_dtype=torch.float16, device_map='cpu', local_files_only=True)
+                torch_dtype=torch.float16, device_map='cpu',
+                local_files_only=LOCAL_FILE_ONLY)
         model.eval()
 
         assert num_stages > 0
         assert len(device_list) >= num_stages
 
         # TODO: is this not on a GPU?
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, local_files_only=True)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name,
+                                                    local_files_only=LOCAL_FILE_ONLY)
 
         num_layers = model.model.config.num_hidden_layers
         layers = model.model.layers[:num_layers]
