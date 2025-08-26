@@ -28,10 +28,16 @@ def main():
 
     tensor_size = args.size * GB
     assert tensor_size < 64 * GB * 0.98
-
     numel = int(tensor_size // 2) # float16 is 2 bytes
+
+    # Reserve memory on both devices
+    torch.empty(numel, dtype=torch.float16, device=DEV_GPU_[0])
+    torch.empty(numel, dtype=torch.float16, device=DEV_GPU_[1])
+
+    # Create a random tensor
     large_tensor = torch.rand(numel, dtype=torch.float16, device=DEV_GPU_[0])
 
+    # Move data repeatedly across two device and measure things
     time_measurements = []
     repeat = 40
     target = 1
@@ -51,11 +57,13 @@ def main():
         duration = (end - start) * 1000
         time_measurements.append(duration)
 
-        torch.cuda.memory.empty_cache()
+        # do not free the reserved area
+        # torch.cuda.memory.empty_cache()
 
         target = 0 if target == 1 else 1
         print(duration, 'ms')
 
+    # Report measurements
     mean, std, mid, _max, count = stats(time_measurements)
     print(f'Mean: {mean:.3f} ms, Std: {std:.3f}, Median: {mid:.3f} ms , Max: {_max:.3f} ms, Count: {count}')
 
