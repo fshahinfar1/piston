@@ -65,6 +65,8 @@ class SimplePipeline:
             req = self.run_queue.pop()
             # move batch of requests to GPUs
             req.move_to(dev_map, non_blocking=True)
+            # We are loading request/batch of request into multiple GPUs
+            # wait until all is loaded
             torch.cuda.synchronize()
 
             stat = ExecutionStatistics(self.num_stages)

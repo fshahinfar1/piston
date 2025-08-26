@@ -8,10 +8,14 @@ DEV_GPU_ = [torch.device(f'cuda:{i % NUM_DEVICES}') for i in range(NUM_STAGES)]
 DEV_CPU = torch.device('cpu')
 
 # TODO: for experimenting reasons I have limited the KV-Cache size to 3 GB
-# AVAILABLE_MEMORY = 3*GB
-AVAILABLE_MEMORY = 50*GB
+AVAILABLE_MEMORY = 3*GB
+# AVAILABLE_MEMORY = 50*GB
 
 # Total number of requests to process
-PILE_SIZE = 128
+PILE_SIZE = 8
+# PILE_SIZE = 128
 
 LOCAL_FILE_ONLY=True
+
+# MODE = 'simple'
+MODE = 'swapping'

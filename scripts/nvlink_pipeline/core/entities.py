@@ -211,16 +211,24 @@ class Request:
         self.generated: List[torch.Tensor] = []
 
         # next token
-        self.next_token_ids = None
-        self.attention_mask = None
+        self.next_token_ids: Optional[torch.Tensor] = None
+        self.attention_mask: Optional[torch.Tensor] = None
 
         # KV Cache of each stage
         self.cache = DynamicCache()
     
     def move_to(self, device_map, non_blocking=False):
+        """
+        Move KV cache of request to the given devices device map indicates for
+        each layer of KV-Cache which device it should go to.
+        """
+
         cache = self.cache
         num_layers = len(cache.layers)
         for i in range(num_layers):
             dev = device_map[i]
+            if dev is None:
+                # do not move this layer
+                continue
             cache.layers[i].keys = cache.layers[i].keys.to(dev, non_blocking=non_blocking)
             cache.layers[i].values = cache.layers[i].values.to(dev, non_blocking=non_blocking)

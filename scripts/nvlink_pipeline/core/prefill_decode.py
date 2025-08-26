@@ -17,7 +17,7 @@ def do_prefill(req, replica):
     req.generated.append(req.next_token_ids)
 
 
-def do_decode(req, replica, stat, max_iter=32):
+def do_decode(req, replica, stat, max_iter=32) -> None:
     for _ in range(max_iter):
         next_token = replica.do_one_iteration(req, stat)
 

@@ -3,6 +3,7 @@ import time
 
 from core.entities import Request
 from core.simple_pipeline import SimplePipeline
+from core.swapping_pipeline import SwappingPipeline
 
 from constants import *
 
@@ -28,14 +29,12 @@ def main():
     num_stages = 2
     model_name = 'microsoft/Phi-3.5-mini-instruct'
 
-    mode = 'simple'
-
-    if mode == 'simple':
+    if MODE == 'simple':
         pipeline = SimplePipeline(model_name, num_stages, DEV_GPU_,
             max_length=MAX_LENGTH, available_memory=AVAILABLE_MEMORY)
-    elif mode == 'swapping':
-        # pipeline = SwappingPipeline(model_name, num_stages, DEV_GPU_, batch_size)
-        pass
+    elif MODE == 'swapping':
+        pipeline = SwappingPipeline(DEV_GPU_[2], model_name, num_stages,
+                                    DEV_GPU_, MAX_LENGTH, AVAILABLE_MEMORY)
     else:
         raise RuntimeError('Unexpected value for experiment mode')
 
@@ -54,5 +53,4 @@ def main():
     
 
 if __name__ == '__main__':
-    # test()
     main()
