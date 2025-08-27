@@ -1,13 +1,13 @@
 #! /bin/bash
-#SBATCH --job-name nvlink_speed 
+#SBATCH --job-name pipeline_test 
 #SBATCH --account=euhpc_d17_077
 #SBATCH --partition=boost_usr_prod      # or your assigned partition
 #SBATCH --nodes=1                      # one node to ensure GPUs are on same physical machine
 #SBATCH --ntasks=1                     # one task
 #SBATCH --cpus-per-task=8              # CPU cores allocated; tune as needed
-#SBATCH --gres=gpu:2                   # request two GPUs
+#SBATCH --gres=gpu:3                   # request two GPUs
 #SBATCH --mem=16G                      # request RAM, change xx as needed
-#SBATCH --time=00:10:00                # e.g. ten minutes of runtime
+#SBATCH --time=00:20:00                # e.g. ten minutes of runtime
 #SBATCH --output=output/stdout.txt
 #SBATCH --error=output/stderr.txt
 
@@ -26,19 +26,20 @@ if [ ! -d $VENV_DIR ]; then
 	python3 -m pip install -r ./requirements.txt
 	deactivate
 fi
-source $VENV_DIR/bin/activate
+source $VENV_DIR/bin/activate 
 
-# Main commands
+
 nvidia-smi
 nvidia-smi topo -m
 
 nsys profile \
-  --output=llm_trace \
+  --output=nvlink_pipeline \
   --trace=cuda,nvtx,osrt \
   --sample=none \
   --gpu-metrics-device=all \
   --force-overwrite=true \
-  python ./nvlink_speed.py 32
+  python ./main.py
 
 
-echo done
+echo "----------------------------------"
+echo "done"

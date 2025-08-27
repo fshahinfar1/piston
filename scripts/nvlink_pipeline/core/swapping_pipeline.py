@@ -7,13 +7,20 @@ from .prefill_decode import print_output
 
 class SwappingPipeline(SimplePipeline):
     def __init__(self, spare_memory_device, model_name: str, num_stages: int, device_list: List,
-                    max_length=32, available_memory: int| None =None):
+                    max_length=32, available_memory: int = 64):
         
         assert num_stages == 2, 'The implementation assumes there are two stages'
 
         super().__init__(model_name, num_stages, device_list, max_length, available_memory)
         # Device on which we hold temporary data
         self.spare_memory_device = spare_memory_device
+
+        # Allocate and cache memory on spare device
+        numel = int(available_memory // 2)
+        torch.empty(numel, dtype=torch.float16, device=self.spare_memory_device)
+
+        # For falling back to simple pipeline
+        self._do_simple_pipeline_req_processing = super()._do_process_reqeust
     
     def _free_req(self, req):
         req.cache = DynamicCache()
@@ -96,28 +103,39 @@ class SwappingPipeline(SimplePipeline):
         dev_map = [self.replica.stages[i // r].device for i in range(count)]
 
         dev_spare_mem = [self.spare_memory_device] * count
+
+        stage_zero_dev = self.replica.stages[0].device
         
-        # TODO: FIXME: the code will fail if the length of run_queue is not even
         while self.run_queue:
+
+            # Check if there is only one request/batch of request left then fall
+            # back to simple pipeline
+            if len(self.run_queue) == 1:
+                req = self.run_queue.pop()
+                req.move_to(dev_map, non_blocking=True)
+                req.next_token_ids = req.next_token_ids.to(stage_zero_dev)
+                self._do_simple_pipeline_req_processing(req)
+                continue
+
+            # Work with two request and swap them in and out
             req1 = self.run_queue.pop()
             req2 = self.run_queue.pop()
 
             # Make sure initial token of both requests are on the right device
-            stage_zero_dev = self.replica.stages[0].device
             req1.next_token_ids = req1.next_token_ids.to(stage_zero_dev)
             req2.next_token_ids = req2.next_token_ids.to(stage_zero_dev)
 
             # Move batch of requests to GPUs
             req1.move_to(dev_map, non_blocking=True)
             req2.move_to(dev_spare_mem, non_blocking=True)
-            torch.cuda.synchronize()
+            # torch.cuda.synchronize()
 
             # stat = ExecutionStatistics(self.num_stages)
             with torch.no_grad():
                 # Start by running processing on stage 0 and passing the hidden-state to stage 1
                 # while loading the req2 to stage 0
                 self.do_swapping_decode_on_stage(req1, req2, 0, finish=False)
-                torch.cuda.synchronize()
+                # torch.cuda.synchronize()
 
                 # TODO: Improve the code to support multiple stages not just two
                 for _ in range(self.max_length):
@@ -125,12 +143,12 @@ class SwappingPipeline(SimplePipeline):
                     self.do_swapping_decode_on_stage(req2, req1, 0, finish=False)
                     # Also involve the second stage in processing
                     self.do_swapping_decode_on_stage(req1, req2, 1, finish=True)
-                    torch.cuda.synchronize()
+                    # torch.cuda.synchronize()
 
                     # Complete a swapping cycle
                     self.do_swapping_decode_on_stage(req1, req2, 0, finish=False) # TODO: on the last iteration we should not do this
                     self.do_swapping_decode_on_stage(req2, req1, 1, finish=True)
-                    torch.cuda.synchronize()
+                    # torch.cuda.synchronize()
 
             print_output(req1)
             print_output(req2)

@@ -17,5 +17,5 @@ PILE_SIZE = 8
 
 LOCAL_FILE_ONLY=True
 
-MODE = 'simple'
-# MODE = 'swapping'
+# MODE = 'simple'
+MODE = 'swapping'

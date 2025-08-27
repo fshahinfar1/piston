@@ -52,6 +52,19 @@ class SimplePipeline:
             self.run_queue.append(batched_req)
         torch.cuda.synchronize()
     
+    def _do_process_reqeust(self, req: Request) -> None:
+        stat = ExecutionStatistics(self.num_stages)
+        do_decode(req, self.replica, stat, max_iter=self.max_length)
+        print_output(req)
+
+        stat.report()
+
+        # free memory of requests
+        req.cache = DynamicCache()
+        req.generated = []
+        req.next_token_ids = None
+        # torch.cuda.empty_cache()
+    
     def process_requests(self)-> None:
         if not self.run_queue:
             return
@@ -65,18 +78,9 @@ class SimplePipeline:
             req = self.run_queue.pop()
             # move batch of requests to GPUs
             req.move_to(dev_map, non_blocking=True)
+
             # We are loading request/batch of request into multiple GPUs
             # wait until all is loaded
-            torch.cuda.synchronize()
+            # torch.cuda.synchronize()
 
-            stat = ExecutionStatistics(self.num_stages)
-            do_decode(req, self.replica, stat, max_iter=self.max_length)
-            print_output(req)
-
-            stat.report()
-
-            # free memory of requests
-            req.cache = DynamicCache()
-            req.generated = []
-            req.next_token_ids = None
-            # torch.cuda.empty_cache()
+            self._do_process_reqeust(req)
