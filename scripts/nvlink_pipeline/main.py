@@ -1,5 +1,6 @@
 from typing import *
 import time
+import sys
 
 from core.entities import Request
 from core.simple_pipeline import SimplePipeline
@@ -29,6 +30,7 @@ def main():
     num_stages = 2
     model_name = 'microsoft/Phi-3.5-mini-instruct'
 
+    print('Running experiment with pipeline mode:', MODE)
     if MODE == 'simple':
         pipeline = SimplePipeline(model_name, num_stages, DEV_GPU_,
             max_length=MAX_LENGTH, available_memory=AVAILABLE_MEMORY)
@@ -38,6 +40,7 @@ def main():
     else:
         raise RuntimeError('Unexpected value for experiment mode')
 
+    print(f'Processing a pile of {PILE_SIZE} requests')
     print('Batch size is:', pipeline.batch_size)
 
     for req in load_pile_of_request(PILE_SIZE):
@@ -53,4 +56,7 @@ def main():
     
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except:
+        sys.exit(1)
