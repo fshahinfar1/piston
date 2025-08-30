@@ -10,7 +10,7 @@ from utils.worker import Worker, Promise
 class SwappingPipeline(SimplePipeline):
     def __init__(self, spare_memory_device, model_name: str, num_stages: int, device_list: List,
                     max_length=32, available_memory: int = 64):
-        
+
         assert num_stages == 2, 'The implementation assumes there are two stages'
 
         super().__init__(model_name, num_stages, device_list, max_length, available_memory)
@@ -27,12 +27,17 @@ class SwappingPipeline(SimplePipeline):
         self._count_worker = 4
         self._next_worker = 0
         self._workers = [Worker() for _ in range(self._count_worker)]
-    
+
+    def __del__(self):
+        print('pipeline __del__')
+        for w in self._workers:
+            w.die()
+
     def _free_req(self, req):
         req.cache = DynamicCache()
         req.generated = []
         req.next_token_ids = None
-    
+
     def _finish_req_iter(self, req) -> None:
         logits = self.replica.lm_head(req.next_token_ids)
         logits = logits.float()
@@ -40,13 +45,13 @@ class SwappingPipeline(SimplePipeline):
         next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
         req.next_token_ids = next_token
         req.generated.append(next_token)
-    
+
     def _do_swapping_decode_on_stage(self, req1, req2, stage_index, finish) -> None:
         """
         ATTENTION: The order of calling this function on requests and
                    stages matter and its your responsibility to get it
                    right!
-        
+
         ATTENTION: call with torch.no_grad
 
         Process req1 on stage[stage_index]. Move the generated hidden value to
@@ -69,7 +74,7 @@ class SwappingPipeline(SimplePipeline):
                                 attention_mask=req1.attention_mask,
                                 use_cache=True,
                                 past_key_values=cache)
-        
+
             # Move the activation values to the next stage
             hidden_state = out.last_hidden_state
 
@@ -83,7 +88,7 @@ class SwappingPipeline(SimplePipeline):
                 req1.next_token_ids = req1.next_token_ids.to(next_stage.device, non_blocking=True)
             else:
                 req1.next_token_ids = hidden_state.to(next_stage.device, non_blocking=True)
-        
+
 
         # TODO: move KV-Cache layer by layer
         # Move the KV-Cache layers from this stage to spare memory
@@ -113,7 +118,7 @@ class SwappingPipeline(SimplePipeline):
         promise = worker.add_task(SwappingPipeline._do_swapping_decode_on_stage, self, req1, req2,
                                                     stage_index, finish)
         return promise
-    
+
     def process_requests(self)-> None:
         if not self.run_queue:
             return
@@ -126,7 +131,7 @@ class SwappingPipeline(SimplePipeline):
         dev_spare_mem = [self.spare_memory_device] * count
 
         stage_zero_dev = self.replica.stages[0].device
-        
+
         while self.run_queue:
 
             # Check if there is only one request/batch of request left then fall
@@ -186,7 +191,3 @@ class SwappingPipeline(SimplePipeline):
             self._free_req(req1)
             self._free_req(req2)
             # torch.cuda.empty_cache()
-
-        print('done')
-        for worker in self._workers:
-            worker.die()
