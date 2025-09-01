@@ -34,22 +34,6 @@ def do_decode(req, replica, stat, max_iter=32) -> None:
         
         # torch.cuda.empty_cache()
 
-def get_batch_size(replica, max_length, available_memory=None):
-    if available_memory is None:
-        total_gpu_mem = 0
-        for gpu_index in range(NUM_DEVICES):
-            t = torch.cuda.get_device_properties(gpu_index).total_memory * 0.9
-            r = torch.cuda.memory_reserved(gpu_index)
-            a = torch.cuda.memory_allocated(gpu_index)
-            print('GPU', gpu_index, 'total:', t, 'allocated', a)
-            total_gpu_mem += t - a
-    else:
-        total_gpu_mem = available_memory
-    
-    max_kv_size = replica.get_max_kv_cache_size(max_length)
-    num_req = int(total_gpu_mem // max_kv_size)
-    return num_req
-
 def print_output(req):
     # Actually generate the text
     # generated = torch.cat([t.to(DEV_CPU) for t in req.generated], dim=-1)
@@ -77,5 +61,10 @@ def do_batch_prefill(requests: List[Request], replica: Replica) -> Request:
 
     req.next_token_ids = next_token
     req.generated.append(req.next_token_ids)
+
+    # print(len(requests))
+    # for r in requests:
+    #     print(r.prompt)
+    # print('Req', req.id, 'size:', req.bytes())
 
     return req

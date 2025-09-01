@@ -79,20 +79,21 @@ class SubModel:
         hidden_states = inputs_embeds
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
-        for decoder_layer in self.layers:
-            hidden_states = decoder_layer(
-                hidden_states,
-                attention_mask=causal_mask,
-                position_ids=position_ids,
-                past_key_value=past_key_values,
-                use_cache=use_cache,
-                cache_position=cache_position,
-                position_embeddings=position_embeddings,
-            )
+        with torch.no_grad():
+            for decoder_layer in self.layers:
+                hidden_states = decoder_layer(
+                    hidden_states,
+                    attention_mask=causal_mask,
+                    position_ids=position_ids,
+                    past_key_value=past_key_values,
+                    use_cache=use_cache,
+                    cache_position=cache_position,
+                    position_embeddings=position_embeddings,
+                )
 
-        # Last stage
-        if self.norm is not None:
-            hidden_states = self.norm(hidden_states)
+            # Last stage
+            if self.norm is not None:
+                hidden_states = self.norm(hidden_states)
 
         out = BaseModelOutputWithPast(
             last_hidden_state=hidden_states,
@@ -153,8 +154,25 @@ class Replica:
         # move the lm_head to the last stage's device
         self.lm_head = self.lm_head.to(self.stages[-1].device)
     
+    def get_kv_cache_token_size(self) -> int:
+        """
+        Approximately how much memory one token of kv cache will consume
+        """
+        # two: key and value
+        # two: two bytes for float 6
+        # one: batch size
+        # one: sequence size
+        # num heads
+        # hidden size
+        # num tokens
+        bytes = (2 * 2 * 1 * 1 * self.config.num_key_value_heads * self.config.hidden_size)
+        return bytes
+
     def get_max_kv_cache_size(self, max_length) -> int:
-        bytes = (2 * 2 * self.config.num_key_value_heads * self.config.hidden_size * max_length)
+        """
+        Approximately what is the size of a kv cache with max-length number of tokens
+        """
+        bytes = self.get_kv_cache_token_size() * max_length
         return bytes
     
     def do_one_iteration(self, req, stats=None) -> torch.Tensor:
@@ -202,7 +220,12 @@ class Replica:
 
 
 class Request:
+    counter = 1
+
     def __init__(self, prompt: str):
+        self.id = Request.counter
+        Request.counter += 1
+
         # prompt string
         self.prompt = prompt
 
@@ -227,8 +250,29 @@ class Request:
         num_layers = len(cache.layers)
         for i in range(num_layers):
             dev = device_map[i]
-            if dev is None:
+            if dev is None or cache.layers[i].keys.device == dev:
                 # do not move this layer
                 continue
             cache.layers[i].keys = cache.layers[i].keys.to(dev, non_blocking=non_blocking)
             cache.layers[i].values = cache.layers[i].values.to(dev, non_blocking=non_blocking)
+    
+    def cache_size_bytes(self) -> int:
+        dc = self.cache
+        nbytes = 0
+        # print('--->', dc.layers[0].keys.numel(), dc.layers[0].keys.shape)
+        for layer in dc.layers:
+            nbytes += layer.keys.numel()   * layer.keys.element_size()
+            nbytes += layer.values.numel() * layer.values.element_size()
+        return nbytes
+    
+    def bytes(self) -> int:
+        b = self.cache_size_bytes()
+        for t in self.generated:
+            b += t.numel() * t.element_size()
+        return b 
+    
+    def free(self):
+        # TODO: Do I need to do this? why?
+        self.cache = None
+        self.generated.clear()
+        self.next_token_ids = None

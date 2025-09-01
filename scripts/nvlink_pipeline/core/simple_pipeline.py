@@ -5,7 +5,8 @@ from transformers.generation.utils import DynamicCache
 
 from .entities import Request, Replica
 from .statistics import ExecutionStatistics
-from .prefill_decode import do_prefill, do_batch_prefill, do_decode, get_batch_size, print_output
+from .prefill_decode import do_prefill, do_batch_prefill, do_decode, print_output
+from utils.memman import get_batch_size, get_max_num_tokens
 from constants import *
 
 
@@ -18,9 +19,14 @@ class SimplePipeline:
         self.available_memory = available_memory
         self.max_length = max_length
         self.batch_size = get_batch_size(self.replica, max_length, self.available_memory)
+        # self.max_token_limit = get_max_num_tokens(self.replica, self.available_memory)
+        # self.batch_size = 4
 
         self.rx_queue: List[Request] = []
         self.run_queue: List[Request] = [] # Requests can actually be batched Rquests
+    
+    def close(self) -> None:
+        return
     
     def add_request(self, req):
         self.rx_queue.append(req)

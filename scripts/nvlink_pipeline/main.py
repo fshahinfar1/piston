@@ -12,7 +12,7 @@ from constants import *
 def load_pile_of_request(pile_size):
     prompts = []
     with open('prompts.txt', 'r') as f:
-        prompts = list(f.readlines())
+        prompts = [l for l in f.readlines() if not l.startswith('#')]
     
     num_prompts = len(prompts)
     repeat = pile_size // num_prompts
@@ -48,16 +48,17 @@ def main():
     
     # pipeline.prepare_run_queue()
     pipeline.prepare_run_queue_batched()
-    
+
     start_time = time.time()
-    pipeline.process_requests()
+
+    try:
+        pipeline.process_requests()
+    finally:
+        pipeline.close()
+
     end_time = time.time()
     print(f"Time to process {PILE_SIZE} requests: {end_time - start_time:.2f} seconds")
     
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception as e:
-        print(e)
-        sys.exit(1)
+    main()
