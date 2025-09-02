@@ -20,7 +20,7 @@ class SimplePipeline:
         self.max_length = max_length
         self.batch_size = get_batch_size(self.replica, max_length, self.available_memory)
         # self.max_token_limit = get_max_num_tokens(self.replica, self.available_memory)
-        # self.batch_size = 4
+        self.batch_size = BATCH_SIZE
 
         self.rx_queue: List[Request] = []
         self.run_queue: List[Request] = [] # Requests can actually be batched Rquests
