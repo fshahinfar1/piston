@@ -11,10 +11,10 @@ DEV_CPU = torch.device('cpu')
 AVAILABLE_MEMORY = 3 * GB
 # AVAILABLE_MEMORY = 50*GB
 
-BATCH_SIZE = 40
+BATCH_SIZE = 4
 
 # Total number of requests to process
-PILE_SIZE = 200
+PILE_SIZE = 8
 
 LOCAL_FILE_ONLY=True
 

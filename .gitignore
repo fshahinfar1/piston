@@ -1,8 +1,9 @@
 *.pyc
 tags
 tags.*
-.dmypy.json
-.mypy_*
+*.dmypy.json
+*.mypy_*
 # SLURM outputs
 stderr.txt
 stdout.txt
+*.nsys-rep

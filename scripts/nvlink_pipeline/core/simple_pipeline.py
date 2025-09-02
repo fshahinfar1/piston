@@ -65,10 +65,8 @@ class SimplePipeline:
 
         stat.report()
 
-        # free memory of requests
-        req.cache = DynamicCache()
-        req.generated = []
-        req.next_token_ids = None
+        print('Req', req.id, 'size:', req.bytes())
+        req.free()
         # torch.cuda.empty_cache()
     
     def process_requests(self)-> None:

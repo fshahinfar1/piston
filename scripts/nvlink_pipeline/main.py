@@ -36,7 +36,8 @@ def main():
             max_length=MAX_LENGTH, available_memory=AVAILABLE_MEMORY)
     elif MODE == 'swapping':
         pipeline = SwappingPipeline(DEV_GPU_[2], model_name, num_stages,
-                                    DEV_GPU_, MAX_LENGTH, AVAILABLE_MEMORY)
+                                    DEV_GPU_, max_length=MAX_LENGTH,
+                                    available_memory=AVAILABLE_MEMORY)
     else:
         raise RuntimeError('Unexpected value for experiment mode')
 

@@ -12,16 +12,20 @@ from transformers.masking_utils import (
         )
 
 from constants import LOCAL_FILE_ONLY
+from utils.observer import Observable
 
 
-class SubModel:
+class SubModel(Observable):
     """
     This class abstacts a single stage of the pipeline.
     """
     def __init__(self, stage):
+        super().__init__()
+
         self.stage_index = stage
         self.device = torch.device('cpu')
         self.layers = []
+        self.first_layer_index = 0 
 
         # Only the first stage will have embed_tokens set
         self.embed_tokens = None
@@ -80,7 +84,7 @@ class SubModel:
         position_embeddings = self.rotary_emb(hidden_states, position_ids)
 
         with torch.no_grad():
-            for decoder_layer in self.layers:
+            for k, decoder_layer in enumerate(self.layers):
                 hidden_states = decoder_layer(
                     hidden_states,
                     attention_mask=causal_mask,
@@ -90,6 +94,7 @@ class SubModel:
                     cache_position=cache_position,
                     position_embeddings=position_embeddings,
                 )
+                self._notify('layer_finish', self.first_layer_index + k)
 
             # Last stage
             if self.norm is not None:
@@ -132,6 +137,7 @@ class Replica:
             prev = s_index * stage_num_layers
             next = prev + stage_num_layers
             s.layers = layers[prev:next]
+            s.first_layer_index = prev
 
             # TODO: I am not sure about these
             s.config = self.config
@@ -267,12 +273,11 @@ class Request:
         after pre_move_to is finished.
         """
 
-        state = self._pre_move_state.get(pre_move_key)
-        if state is None:
-            state = []
-            self._pre_move_state[pre_move_key] = state
-        else:
+        if pre_move_key in self._pre_move_state:
             raise Exception('Overwirting a previous pre-move state', pre_move_key)
+
+        state: List[Tuple[int, torch.Tensor, torch.Tensor]] = []
+        self._pre_move_state[pre_move_key] = state
         
         for i, layer in enumerate(self.cache.layers):
             target_dev = device_map[i]
@@ -288,16 +293,18 @@ class Request:
         state = self._pre_move_state.get(pre_move_key)
         if state is None:
             raise Exception('The premove state is empty. Probably calling apply before pre-moving!')
-        del self._pre_move_state[pre_move_key]
         
         for index, new_keys, new_values in state:
             self.cache.layers[index].keys = new_keys
             self.cache.layers[index].values = new_values
+
+        del self._pre_move_state[pre_move_key]
     
     def cache_size_bytes(self) -> int:
         dc = self.cache
         nbytes = 0
-        # print('--->', dc.layers[0].keys.numel(), dc.layers[0].keys.shape)
+        print('--->', 'num layers:', len(dc.layers), 'num floats:',
+        dc.layers[0].keys.numel(), 'shape:', dc.layers[0].keys.shape)
         for layer in dc.layers:
             nbytes += layer.keys.numel()   * layer.keys.element_size()
             nbytes += layer.values.numel() * layer.values.element_size()

@@ -24,9 +24,15 @@ class SwappingPipeline(SimplePipeline):
         # For falling back to simple pipeline
         self._do_simple_pipeline_req_processing = super()._do_process_reqeust
 
+        # For computing forward pass in background
         self._count_worker = 2
         self._next_worker = 0
         self._workers = [Worker() for _ in range(self._count_worker)]
+
+        # Register layer completion callbacks for moving KV-cache layer by layer
+        for index, stage in enumerate(self.replica.stages):
+            stage.register('layer_finish', self._move_kv_cache_layer, index)
+        self._active_request: List[Optional[torch.Tensor]] = [None,] * len(self.replica.stages)
     
     def __del__(self):
         self.close()
@@ -46,7 +52,7 @@ class SwappingPipeline(SimplePipeline):
         req.next_token_ids = next_token
         req.generated.append(next_token)
 
-    def _do_swapping_decode_on_stage(self, req1, req2, stage_index, finish) -> None:
+    def _do_decode_on_stage(self, req1, stage_index, finish) -> None:
         """
         Calculate MLP feed forward part of one iteration and move the
         hidden_state to the next device of stage.
@@ -74,6 +80,31 @@ class SwappingPipeline(SimplePipeline):
                 self._finish_req_iter(req1)
 
             req1.next_token_ids = req1.next_token_ids.to(next_stage.device, non_blocking=True)
+
+    def _move_kv_cache_layer(self, stage_index, layer_index):
+        """
+        This is called when forward pass finishes processing a layer.
+        Start moving that layers KV-cache to spare memory
+
+        TODO: start loading the KV-cache for that layer of other requests
+
+        stage: user provided state when registering the callback
+        layer_index: index of layer that got finished
+        """
+        req = self._active_request[stage_index]
+        assert req is not None
+
+        stage = self.replica.stages[stage_index]
+        # f = stage.first_layer_index 
+        # t = f + len(stage.layers)
+
+        dev_map = [None] * len(req.cache.layers)
+        # dev_map[f:t]  = [self.spare_memory_device, ] * per_layer
+        dev_map[stage_index] = self.spare_memory_device
+
+        with torch.Stream(device=stage.device) as s_cuda:
+            # Also move KV cache to the spare device in parallel
+            req.move_to(dev_map, non_blocking=True)
  
     def swapping_decode_on_stage(self, req1, req2, stage_index, finish) -> Promise:
         """
@@ -89,27 +120,18 @@ class SwappingPipeline(SimplePipeline):
         """
         stage = self.replica.stages[stage_index]
 
+        # mark the active request
+        self._active_request[stage_index] = req1
+
         worker = self._workers[self._next_worker]
         self._next_worker = (self._next_worker + 1) % self._count_worker
 
         # Run forward pass in a worker thread
-        fn = SwappingPipeline._do_swapping_decode_on_stage
+        fn = SwappingPipeline._do_decode_on_stage
         promise = worker.add_task(fn, self, req1, req2, stage_index, finish)
 
-        # NOTE: at the moment the KV cache is copied to spare memory while using it
-        # Move the KV-Cache layers from this stage to spare memory
-        num_layers = len(req1.cache.layers)
-        per_layer =  int(num_layers // 2)
-        dev_map = [None] * num_layers
-
-        f = stage_index * per_layer
-        t = f + per_layer
-        dev_map[f:t]  = [self.spare_memory_device, ] * per_layer
-
-        with torch.Stream(device=stage.device) as s_cuda:
-            # Also move KV cache to the spare device in parallel
-            req1.pre_move_to(stage_index, dev_map, non_blocking=True)
-
+        # NOTE: When the worker finishes processing a layer _move_kv_cache_layer
+        # is called and that layers KV cache is moved
  
         def local_load_other_req():
             # wait until req1 calculation is over
@@ -118,23 +140,22 @@ class SwappingPipeline(SimplePipeline):
             # wait until req1 kv cache is copied
             torch.cuda.synchronize(stage.device)
 
-            # NOTE: make sure you have done the premove before
-            req1.apply_pre_move(stage_index)
-
             # Move the KV-Cache layers from the spare memory to this stage
             # This step must happen after 1) forward pass & 2) moving KV to
             # spare memory. Otherwise we must run out of memory when we are
             # fully utilizing the GPUs
             num_layers = len(req2.cache.layers)
+            per_layer =  int(num_layers // 2)
+            f = stage.first_layer_index 
+            t = f + per_layer
             dev_map = [None] * num_layers
             dev_map[f:t] = [stage.device, ] * per_layer
             req2.move_to(dev_map, non_blocking=True)
 
-        # NOTE: Add the task to the same worker that we assigned MLP feed forward.
-        # because we are waiting for its completion anyway.
+        # NOTE: Add the task to the same worker that we assigned MLP feed
+        # forward.  because we are waiting for its completion anyway.
         promise2 = worker.add_task(local_load_other_req)
 
-        # p2 depends on promise
         return promise2
 
     def process_requests(self)-> None:
@@ -207,6 +228,9 @@ class SwappingPipeline(SimplePipeline):
             # stat.report()
 
             # free memory of requests
+            print('Req', req1.id, 'size:', req1.bytes())
+            print('Req', req2.id, 'size:', req2.bytes())
+
             req1.free()
             req2.free()
             # torch.cuda.empty_cache()
