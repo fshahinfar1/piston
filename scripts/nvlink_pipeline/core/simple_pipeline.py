@@ -66,7 +66,7 @@ class SimplePipeline:
 
         # stat.report()
 
-        # print('Req', req.id, 'size:', req.bytes())
+        print('Req', req.id, 'size:', req.bytes())
         req.free()
         # torch.cuda.empty_cache()
     

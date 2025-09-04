@@ -33,7 +33,7 @@ class SwappingPipeline(SimplePipeline):
         self._kv_cache_workers = [Worker() for _ in range(num_stages)]
         self._in_flight_copies = {i: [] for i in range(num_stages)}
 
-        self._active_request: List[Optional[torch.Tensor]] = [None,] * len(self.replica.stages)
+        self._active_request: List[Optional[Tuple[torch.Tensor, torch.Tensor]]] = [None,] * len(self.replica.stages)
     
     def __del__(self):
         self.close()
@@ -99,20 +99,24 @@ class SwappingPipeline(SimplePipeline):
         This function should run in a kv-cache worker thread. So the blocking
         move should be fine.
         """
-        req = self._active_request[stage_index]
-        assert req is not None
+        tmp = self._active_request[stage_index]
+        assert tmp is not None
+        req1, req2 = tmp
+        assert req1 is not None
+        assert req2 is not None
 
         stage = self.replica.stages[stage_index]
-        # f = stage.first_layer_index 
-        # t = f + len(stage.layers)
-
-        dev_map = [None] * len(req.cache.layers)
-        # dev_map[f:t]  = [self.spare_memory_device, ] * per_layer
-        dev_map[layer_index] = self.spare_memory_device
 
         with torch.Stream(device=stage.device) as s_cuda:
-            # Also move KV cache to the spare device in parallel
-            req.move_to(dev_map, non_blocking=False)
+            # move this layer of KV cache to the spare device in parallel
+            dev_map = [None] * len(req1.cache.layers)
+            dev_map[layer_index] = self.spare_memory_device
+            req1.move_to(dev_map, non_blocking=True)
+
+            # bring the layer for the other KV cache to this device
+            dev_map = [None] * len(req2.cache.layers)
+            dev_map[layer_index] = stage.device
+            req2.move_to(dev_map, non_blocking=True)
 
     def _move_kv_cache_layer(self, stage_index, layer_index):
         """
@@ -143,7 +147,7 @@ class SwappingPipeline(SimplePipeline):
         stage = self.replica.stages[stage_index]
 
         # mark the active request
-        self._active_request[stage_index] = req1
+        self._active_request[stage_index] = (req1, req2)
 
         worker = self._workers[self._next_worker]
         self._next_worker = (self._next_worker + 1) % self._count_worker
@@ -163,19 +167,19 @@ class SwappingPipeline(SimplePipeline):
             for p in self._in_flight_copies[stage_index]:
                 p.wait()
             self._in_flight_copies[stage_index].clear()
-            torch.cuda.synchronize(stage.device)
+            # torch.cuda.synchronize(stage.device)
 
             # Move the KV-Cache layers from the spare memory to this stage
             # This step must happen after 1) forward pass & 2) moving KV to
             # spare memory. Otherwise we must run out of memory when we are
             # fully utilizing the GPUs
-            num_layers = len(req2.cache.layers)
-            per_layer =  int(num_layers // 2)
-            f = stage.first_layer_index 
-            t = f + per_layer
-            dev_map = [None] * num_layers
-            dev_map[f:t] = [stage.device, ] * per_layer
-            req2.move_to(dev_map, non_blocking=True)
+            # num_layers = len(req2.cache.layers)
+            # per_layer =  int(num_layers // 2)
+            # f = stage.first_layer_index 
+            # t = f + per_layer
+            # dev_map = [None] * num_layers
+            # dev_map[f:t] = [stage.device, ] * per_layer
+            # req2.move_to(dev_map, non_blocking=True)
 
         # NOTE: Add the task to the same worker that we assigned MLP feed
         # forward.  because we are waiting for its completion anyway.
@@ -230,7 +234,7 @@ class SwappingPipeline(SimplePipeline):
             # Start by running processing on stage 0 and passing the hidden-state to stage 1
             # while loading the req2 to stage 0
             self.swapping_decode_on_stage(req1, req2, 0, finish=False).wait()
-            torch.cuda.synchronize()
+            # torch.cuda.synchronize()
 
             # TODO: Improve the code to support multiple stages not just two
             for _ in range(self.max_length):
@@ -241,7 +245,7 @@ class SwappingPipeline(SimplePipeline):
 
                 x.wait()
                 y.wait()
-                torch.cuda.synchronize()
+                # torch.cuda.synchronize()
 
                 # Complete a swapping cycle
                 x = self.swapping_decode_on_stage(req1, req2, 0, finish=False) # TODO: on the last iteration we should not do this
@@ -249,7 +253,7 @@ class SwappingPipeline(SimplePipeline):
 
                 x.wait()
                 y.wait()
-                torch.cuda.synchronize()
+                # torch.cuda.synchronize()
 
             print_output(req1)
             print_output(req2)
@@ -257,8 +261,8 @@ class SwappingPipeline(SimplePipeline):
             # stat.report()
 
             # free memory of requests
-            # print('Req', req1.id, 'size:', req1.bytes())
-            # print('Req', req2.id, 'size:', req2.bytes())
+            print('Req', req1.id, 'size:', req1.bytes())
+            print('Req', req2.id, 'size:', req2.bytes())
 
             req1.free()
             req2.free()
