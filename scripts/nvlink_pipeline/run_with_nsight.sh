@@ -45,9 +45,9 @@ nsys profile \
   --force-overwrite=true \
   python ./main.py
 
-  sync -f ./
-  sync
-  sleep 10
+sync -f ./
+sync
+sleep 10
 
 
 echo "----------------------------------"

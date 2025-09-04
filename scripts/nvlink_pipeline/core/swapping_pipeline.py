@@ -29,9 +29,10 @@ class SwappingPipeline(SimplePipeline):
         self._next_worker = 0
         self._workers = [Worker() for _ in range(self._count_worker)]
 
-        # Register layer completion callbacks for moving KV-cache layer by layer
-        for index, stage in enumerate(self.replica.stages):
-            stage.register('layer_finish', self._move_kv_cache_layer, index)
+        # For moving kv caches
+        self._kv_cache_workers = [Worker() for _ in range(num_stages)]
+        self._in_flight_copies = {i: [] for i in range(num_stages)}
+
         self._active_request: List[Optional[torch.Tensor]] = [None,] * len(self.replica.stages)
     
     def __del__(self):
@@ -41,8 +42,20 @@ class SwappingPipeline(SimplePipeline):
         """
         Close pipeline and release resources 
         """
-        for w in self._workers:
+        for w in self._workers + self._kv_cache_workers:
             w.die()
+        
+        self._unregister_from_layer_completion()
+
+    
+    def _register_for_layer_completion(self):
+        # Register layer completion callbacks for moving KV-cache layer by layer
+        for index, stage in enumerate(self.replica.stages):
+            stage.register('layer_finish', self._move_kv_cache_layer, index)
+    
+    def _unregister_from_layer_completion(self):
+        for index, stage in enumerate(self.replica.stages):
+            stage.unregister('layer_finish', self._move_kv_cache_layer)
 
     def _finish_req_iter(self, req) -> None:
         logits = self.replica.lm_head(req.next_token_ids)
@@ -80,6 +93,26 @@ class SwappingPipeline(SimplePipeline):
                 self._finish_req_iter(req1)
 
             req1.next_token_ids = req1.next_token_ids.to(next_stage.device, non_blocking=True)
+    
+    def _do_move_kv_cache_layer(self, stage_index, layer_index):
+        """
+        This function should run in a kv-cache worker thread. So the blocking
+        move should be fine.
+        """
+        req = self._active_request[stage_index]
+        assert req is not None
+
+        stage = self.replica.stages[stage_index]
+        # f = stage.first_layer_index 
+        # t = f + len(stage.layers)
+
+        dev_map = [None] * len(req.cache.layers)
+        # dev_map[f:t]  = [self.spare_memory_device, ] * per_layer
+        dev_map[layer_index] = self.spare_memory_device
+
+        with torch.Stream(device=stage.device) as s_cuda:
+            # Also move KV cache to the spare device in parallel
+            req.move_to(dev_map, non_blocking=False)
 
     def _move_kv_cache_layer(self, stage_index, layer_index):
         """
@@ -91,20 +124,9 @@ class SwappingPipeline(SimplePipeline):
         stage: user provided state when registering the callback
         layer_index: index of layer that got finished
         """
-        req = self._active_request[stage_index]
-        assert req is not None
-
-        stage = self.replica.stages[stage_index]
-        # f = stage.first_layer_index 
-        # t = f + len(stage.layers)
-
-        dev_map = [None] * len(req.cache.layers)
-        # dev_map[f:t]  = [self.spare_memory_device, ] * per_layer
-        dev_map[stage_index] = self.spare_memory_device
-
-        with torch.Stream(device=stage.device) as s_cuda:
-            # Also move KV cache to the spare device in parallel
-            req.move_to(dev_map, non_blocking=True)
+        w = self._kv_cache_workers[stage_index]
+        p = w.add_task(self._do_move_kv_cache_layer, stage_index, layer_index)
+        self._in_flight_copies[stage_index].append(p)
  
     def swapping_decode_on_stage(self, req1, req2, stage_index, finish) -> Promise:
         """
@@ -127,8 +149,8 @@ class SwappingPipeline(SimplePipeline):
         self._next_worker = (self._next_worker + 1) % self._count_worker
 
         # Run forward pass in a worker thread
-        fn = SwappingPipeline._do_decode_on_stage
-        promise = worker.add_task(fn, self, req1, req2, stage_index, finish)
+        fn = self._do_decode_on_stage
+        promise = worker.add_task(fn, req1, stage_index, finish)
 
         # NOTE: When the worker finishes processing a layer _move_kv_cache_layer
         # is called and that layers KV cache is moved
@@ -138,6 +160,9 @@ class SwappingPipeline(SimplePipeline):
             promise.wait()
 
             # wait until req1 kv cache is copied
+            for p in self._in_flight_copies[stage_index]:
+                p.wait()
+            self._in_flight_copies[stage_index].clear()
             torch.cuda.synchronize(stage.device)
 
             # Move the KV-Cache layers from the spare memory to this stage
@@ -172,6 +197,9 @@ class SwappingPipeline(SimplePipeline):
 
         stage_zero_dev = self.replica.stages[0].device
 
+        # start listening to layer completion events
+        self._register_for_layer_completion()
+
         while self.run_queue:
 
             # Check if there is only one request/batch of request left then fall
@@ -191,6 +219,7 @@ class SwappingPipeline(SimplePipeline):
             req1.next_token_ids = req1.next_token_ids.to(stage_zero_dev)
             req2.next_token_ids = req2.next_token_ids.to(stage_zero_dev)
 
+            # TODO: maybe open two streams
             # Move batch of requests to GPUs
             req1.move_to(dev_map, non_blocking=True)
             req2.move_to(dev_spare_mem, non_blocking=True)
@@ -228,10 +257,12 @@ class SwappingPipeline(SimplePipeline):
             # stat.report()
 
             # free memory of requests
-            print('Req', req1.id, 'size:', req1.bytes())
-            print('Req', req2.id, 'size:', req2.bytes())
+            # print('Req', req1.id, 'size:', req1.bytes())
+            # print('Req', req2.id, 'size:', req2.bytes())
 
             req1.free()
             req2.free()
             # torch.cuda.empty_cache()
+        
+        self._unregister_from_layer_completion()
 

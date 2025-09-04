@@ -15,7 +15,7 @@ salloc \
 # ---
 
 # Grab a terminal
-srun --pty /bin/bash
+# srun --pty /bin/bash
 
 # TODO: these commands must be executed in the new environment
 ##  source $HOME/my_venv/bin/activate

@@ -1,7 +1,7 @@
 import torch
 
 GB = 1024 ** 3
-MAX_LENGTH = 2048
+MAX_LENGTH = 128
 NUM_DEVICES = 3
 NUM_STAGES = 3
 DEV_GPU_ = [torch.device(f'cuda:{i % NUM_DEVICES}') for i in range(NUM_STAGES)]
@@ -11,7 +11,7 @@ DEV_CPU = torch.device('cpu')
 AVAILABLE_MEMORY = 3 * GB
 # AVAILABLE_MEMORY = 50*GB
 
-BATCH_SIZE = 4
+BATCH_SIZE = 
 
 # Total number of requests to process
 PILE_SIZE = 8
