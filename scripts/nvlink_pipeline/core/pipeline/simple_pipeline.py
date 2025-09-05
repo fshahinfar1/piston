@@ -3,24 +3,24 @@ import time
 import torch
 from transformers.generation.utils import DynamicCache
 
-from ..entities import Request, Replica
-from ..statistics import ExecutionStatistics
-from ..prefill_decode import do_prefill, do_batch_prefill, do_decode, print_output
-from ...utils.memman import get_batch_size, get_max_num_tokens
-from ...constants import *
+from core.entities import Request, Replica
+from core.statistics import ExecutionStatistics
+from core.prefill_decode import do_prefill, do_batch_prefill, do_decode, print_output
+from utils.memman import get_batch_size, get_max_num_tokens
+from constants import *
 
 
 class SimplePipeline:
     def __init__(self, model_name: str, num_stages: int, device_list: List,
-                    max_length=32, available_memory: int| None =None):
+                    max_length=32, batch_size: int=1):
         self.num_stages = num_stages
         self.device_list = device_list
         self.replica = Replica(model_name, num_stages=num_stages, device_list=device_list)
-        self.available_memory = available_memory
+        # self.available_memory = available_memory
         self.max_length = max_length
-        self.batch_size = get_batch_size(self.replica, max_length, self.available_memory)
+        # self.batch_size = get_batch_size(self.replica, max_length, self.available_memory)
         # self.max_token_limit = get_max_num_tokens(self.replica, self.available_memory)
-        self.batch_size = BATCH_SIZE
+        self.batch_size = batch_size
 
         self.rx_queue: List[Request] = []
         self.run_queue: List[Request] = [] # Requests can actually be batched Rquests

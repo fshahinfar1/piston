@@ -2,24 +2,24 @@ from typing import *
 import torch
 from transformers.generation.utils import DynamicCache
 
-from .simple_pipeline import SimplePipeline
-from ..prefill_decode import print_output
-from ...utils.worker import Worker, Promise
+from core.pipeline.simple_pipeline import SimplePipeline
+from core.prefill_decode import print_output
+from utils.worker import Worker, Promise
 
 
 class SwappingPipeline(SimplePipeline):
     def __init__(self, spare_memory_device, model_name: str, num_stages: int, device_list: List,
-                    max_length=32, available_memory: int = 64):
+                    max_length=32, batch_size: int = 64):
 
         assert num_stages == 2, 'The implementation assumes there are two stages'
 
-        super().__init__(model_name, num_stages, device_list, max_length, available_memory)
+        super().__init__(model_name, num_stages, device_list, max_length, batch_size)
         # Device on which we hold temporary data
         self.spare_memory_device = spare_memory_device
 
         # Allocate and cache memory on spare device
-        numel = int(available_memory // 2)
-        torch.empty(numel, dtype=torch.float16, device=self.spare_memory_device)
+        # numel = int(available_memory // 2)
+        # torch.empty(numel, dtype=torch.float16, device=self.spare_memory_device)
 
         # For falling back to simple pipeline
         self._do_simple_pipeline_req_processing = super()._do_process_reqeust

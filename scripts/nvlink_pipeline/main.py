@@ -2,9 +2,11 @@ from typing import *
 import time
 import sys
 
-from .core.entities import Request
-from .core.pipeline import SimplePipeline, SwappingPipeline
-from .constants import *
+import argparse
+
+from core.entities import Request
+from core.pipeline import SimplePipeline, SwappingPipeline
+from constants import *
 
 
 def load_pile_of_request(pile_size):
@@ -23,19 +25,35 @@ def load_pile_of_request(pile_size):
     
     return requests
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--batch', type=int, default=4, help='number of request in a batch')
+    parser.add_argument('--num-requests', type=int, default=32, help='total number of requests to process')
+    parser.add_argument('--pipeline', type=str, default='simple', help='which type of pipeline use for requests processing (simple, swapping)')
+    parser.add_argument('--iters', type=int, default=1024, help='number of tokens to generate')
+
+    args = parser.parse_args()
+    return args
+
 
 def main():
     num_stages = 2
     model_name = 'microsoft/Phi-3.5-mini-instruct'
 
+    args = parse_args()
+    MODE = args.pipeline
+    BATCH_SIZE = args.batch
+    MAX_LENGTH = args.iters
+    PILE_SIZE = args.num_requests
+
     print('Running experiment with pipeline mode:', MODE)
     if MODE == 'simple':
         pipeline = SimplePipeline(model_name, num_stages, DEV_GPU_,
-            max_length=MAX_LENGTH, available_memory=AVAILABLE_MEMORY)
+            max_length=MAX_LENGTH, batch_size=BATCH_SIZE)
     elif MODE == 'swapping':
         pipeline = SwappingPipeline(DEV_GPU_[2], model_name, num_stages,
                                     DEV_GPU_, max_length=MAX_LENGTH,
-                                    available_memory=AVAILABLE_MEMORY)
+                                    batch_size=BATCH_SIZE)
     else:
         raise RuntimeError('Unexpected value for experiment mode')
 
