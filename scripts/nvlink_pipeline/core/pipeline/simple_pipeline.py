@@ -3,11 +3,11 @@ import time
 import torch
 from transformers.generation.utils import DynamicCache
 
-from .entities import Request, Replica
-from .statistics import ExecutionStatistics
-from .prefill_decode import do_prefill, do_batch_prefill, do_decode, print_output
-from utils.memman import get_batch_size, get_max_num_tokens
-from constants import *
+from ..entities import Request, Replica
+from ..statistics import ExecutionStatistics
+from ..prefill_decode import do_prefill, do_batch_prefill, do_decode, print_output
+from ...utils.memman import get_batch_size, get_max_num_tokens
+from ...constants import *
 
 
 class SimplePipeline:

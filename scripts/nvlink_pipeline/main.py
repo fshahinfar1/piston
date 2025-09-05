@@ -2,11 +2,9 @@ from typing import *
 import time
 import sys
 
-from core.entities import Request
-from core.simple_pipeline import SimplePipeline
-from core.swapping_pipeline import SwappingPipeline
-
-from constants import *
+from .core.entities import Request
+from .core.pipeline import SimplePipeline, SwappingPipeline
+from .constants import *
 
 
 def load_pile_of_request(pile_size):

@@ -3,8 +3,8 @@ import torch
 from transformers.generation.utils import DynamicCache
 
 from .simple_pipeline import SimplePipeline
-from .prefill_decode import print_output
-from utils.worker import Worker, Promise
+from ..prefill_decode import print_output
+from ...utils.worker import Worker, Promise
 
 
 class SwappingPipeline(SimplePipeline):
@@ -31,7 +31,7 @@ class SwappingPipeline(SimplePipeline):
 
         # For moving kv caches
         self._kv_cache_workers = [Worker() for _ in range(num_stages)]
-        self._in_flight_copies = {i: [] for i in range(num_stages)}
+        self._in_flight_copies: Dict[int, List[Promise]] = {i: [] for i in range(num_stages)}
 
         self._active_request: List[Optional[Tuple[torch.Tensor, torch.Tensor]]] = [None,] * len(self.replica.stages)
     
