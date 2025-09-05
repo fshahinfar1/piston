@@ -1,0 +1,25 @@
+figsize: [4,4]
+subplots:
+  - title: 'Process 64 requests ' 
+    lines:
+    - label: 'with swapping'
+      x: [1,2,3,4,5,6,7,8]
+      y: [1543, 769, 553, 446, 401, 361, 394, 357]
+      color: 'tab:red'
+      linestyle: '-'
+      marker: 'o'
+      markersize: 3
+    - label: 'baseline'
+      x: [1,2,3,4,5,6,7,8]
+      y: [2380, 1404, 1047, 813, 697, 616, 572, 585]
+      color: 'k'
+      linestyle: ':'
+      marker: 'x'
+      markersize: 3
+    legend:
+      ncol: 1
+      loc: 'upper right'
+    grid: true
+    ylabel: 'Time (sec)'
+    xlabel: 'Batch size'
+output: swapping_pipeline_batch_size_eff.pdf

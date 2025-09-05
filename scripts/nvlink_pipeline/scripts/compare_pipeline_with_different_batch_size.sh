@@ -44,6 +44,7 @@ mkdir -p $OUTDIR/swapping
 for B in $(seq 1 8); do
     for P in  "simple" "swapping" ; do
         python ./main.py --batch $B --num-requests 64 --pipeline $P --iters 1024 | tee $OUTDIR/$P/$B.txt
+        echo '------------------------------'
     done
 done
 
