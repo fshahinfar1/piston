@@ -1,5 +1,8 @@
 from typing import *
-from .entities import Request, Replica
+import torch
+from core.entity import Request
+from .entities import Replica
+from constants import DEV_CPU
 
 
 def do_prefill(req, replica):
@@ -16,30 +19,6 @@ def do_prefill(req, replica):
     req.next_token_ids = next_token
     req.generated.append(req.next_token_ids)
 
-
-def do_decode(req, replica, stat, max_iter=32) -> None:
-    for _ in range(max_iter):
-        next_token = replica.do_one_iteration(req, stat)
-
-        # TODO: maybe avoid moving to CPU? or copy to CPU and other GPU async
-        # next_token = next_token.cpu()
-        # req.generated = torch.cat([req.generated, next_token], dim=-1)
-        req.generated.append(next_token)
-
-        req.next_token_ids = next_token
-
-        # TODO: what should I do when having a batched request?
-        # if next_token.item() == replica.tokenizer.eos_token_id:
-        #     break
-        
-        # torch.cuda.empty_cache()
-
-def print_output(req):
-    # Actually generate the text
-    # generated = torch.cat([t.to(DEV_CPU) for t in req.generated], dim=-1)
-    # final_text = replica.tokenizer.decode(generated[0], skip_special_tokens=True)
-    # print(final_text)
-    return
 
 def do_batch_prefill(requests: List[Request], replica: Replica) -> Request:
     import sys

@@ -3,9 +3,10 @@ import time
 import torch
 from transformers.generation.utils import DynamicCache
 
-from core.entities import Request, Replica
+from core.entity import Request
+from core.entities import Replica
 from core.statistics import ExecutionStatistics
-from core.prefill_decode import do_prefill, do_batch_prefill, do_decode, print_output
+from core.prefill_decode import do_prefill, do_batch_prefill
 from utils.memman import get_batch_size, get_max_num_tokens
 from constants import *
 
@@ -24,13 +25,20 @@ class SimplePipeline:
 
         self.rx_queue: List[Request] = []
         self.run_queue: List[Request] = [] # Requests can actually be batched Rquests
-    
+
     def close(self) -> None:
         return
-    
+
+    def print_output(self, req: Request) -> None:
+        # Actually generate the text
+        generated = torch.cat([t.to(DEV_CPU) for t in req.generated], dim=-1)
+        final_text = self.replica.tokenizer.batch_decode(generated,
+                                                skip_special_tokens=True)
+        print(final_text)
+
     def add_request(self, req):
         self.rx_queue.append(req)
-    
+
     def prepare_run_queue(self) -> None:
         # Do prefill of all request in advance
         for i, req in enumerate(self.rx_queue):
@@ -39,8 +47,9 @@ class SimplePipeline:
             dev_map = [DEV_CPU] * count
             req.move_to(dev_map, non_blocking=True)
             self.run_queue.append(req)
+        self.rx_queue.clear()
         torch.cuda.synchronize()
-    
+
     def prepare_run_queue_batched(self) -> None:
         batch_size = self.batch_size
 
@@ -57,19 +66,20 @@ class SimplePipeline:
             batched_req.move_to(dev_map, non_blocking=True)
             self.run_queue.append(batched_req)
         torch.cuda.synchronize()
-    
+
     def _do_process_reqeust(self, req: Request) -> None:
         # stat = ExecutionStatistics(self.num_stages)
         stat = None
-        do_decode(req, self.replica, stat, max_iter=self.max_length)
-        print_output(req)
+        for _ in range(self.max_length):
+            next_token = self.replica.do_one_iteration(req, stat)
+            req.generated.append(next_token)
+            req.next_token_ids = next_token
 
+        self.print_output(req)
         # stat.report()
-
         print('Req', req.id, 'size:', req.bytes())
         req.free()
-        # torch.cuda.empty_cache()
-    
+
     def process_requests(self)-> None:
         if not self.run_queue:
             return
@@ -78,14 +88,10 @@ class SimplePipeline:
         count = len(self.run_queue[0].cache.layers)
         r = count // self.num_stages
         dev_map = [self.replica.stages[i // r].device for i in range(count)]
-        
+
         while self.run_queue:
             req = self.run_queue.pop()
             # move batch of requests to GPUs
             req.move_to(dev_map, non_blocking=True)
-
-            # We are loading request/batch of request into multiple GPUs
-            # wait until all is loaded
-            # torch.cuda.synchronize()
-
             self._do_process_reqeust(req)
+

@@ -3,7 +3,6 @@ import torch
 from transformers.generation.utils import DynamicCache
 
 from core.pipeline.simple_pipeline import SimplePipeline
-from core.prefill_decode import print_output
 from utils.worker import Worker, Promise
 
 
@@ -34,25 +33,25 @@ class SwappingPipeline(SimplePipeline):
         self._in_flight_copies: Dict[int, List[Promise]] = {i: [] for i in range(num_stages)}
 
         self._active_request: List[Optional[Tuple[torch.Tensor, torch.Tensor]]] = [None,] * len(self.replica.stages)
-    
+
     def __del__(self):
         self.close()
 
     def close(self) -> None:
         """
-        Close pipeline and release resources 
+        Close pipeline and release resources
         """
         for w in self._workers + self._kv_cache_workers:
             w.die()
-        
+
         self._unregister_from_layer_completion()
 
-    
+
     def _register_for_layer_completion(self):
         # Register layer completion callbacks for moving KV-cache layer by layer
         for index, stage in enumerate(self.replica.stages):
             stage.register('layer_finish', self._move_kv_cache_layer, index)
-    
+
     def _unregister_from_layer_completion(self):
         for index, stage in enumerate(self.replica.stages):
             stage.unregister('layer_finish', self._move_kv_cache_layer)
@@ -79,10 +78,11 @@ class SwappingPipeline(SimplePipeline):
         next_stage = self.replica.stages[next_stage_index]
 
         with torch.Stream(device=stage.device) as s_cuda:
-            out = stage.forward(req1.next_token_ids,
-                                attention_mask=req1.attention_mask,
-                                use_cache=True,
-                                past_key_values=req1.cache)
+            with torch.no_grad():
+                out = stage.forward(req1.next_token_ids,
+                                    attention_mask=req1.attention_mask,
+                                    use_cache=True,
+                                    past_key_values=req1.cache)
 
             # Move the activation values to the next stage
             req1.next_token_ids = out.last_hidden_state
@@ -93,7 +93,7 @@ class SwappingPipeline(SimplePipeline):
                 self._finish_req_iter(req1)
 
             req1.next_token_ids = req1.next_token_ids.to(next_stage.device, non_blocking=True)
-    
+
     def _do_move_kv_cache_layer(self, stage_index, layer_index):
         """
         This function should run in a kv-cache worker thread. So the blocking
@@ -131,7 +131,7 @@ class SwappingPipeline(SimplePipeline):
         w = self._kv_cache_workers[stage_index]
         p = w.add_task(self._do_move_kv_cache_layer, stage_index, layer_index)
         self._in_flight_copies[stage_index].append(p)
- 
+
     def swapping_decode_on_stage(self, req1, req2, stage_index, finish) -> Promise:
         """
         ATTENTION: The order of calling this function on requests and
@@ -158,7 +158,7 @@ class SwappingPipeline(SimplePipeline):
 
         # NOTE: When the worker finishes processing a layer _move_kv_cache_layer
         # is called and that layers KV cache is moved
- 
+
         def local_load_other_req():
             # wait until req1 calculation is over
             promise.wait()
@@ -175,7 +175,7 @@ class SwappingPipeline(SimplePipeline):
             # fully utilizing the GPUs
             # num_layers = len(req2.cache.layers)
             # per_layer =  int(num_layers // 2)
-            # f = stage.first_layer_index 
+            # f = stage.first_layer_index
             # t = f + per_layer
             # dev_map = [None] * num_layers
             # dev_map[f:t] = [stage.device, ] * per_layer
@@ -255,8 +255,8 @@ class SwappingPipeline(SimplePipeline):
                 y.wait()
                 # torch.cuda.synchronize()
 
-            print_output(req1)
-            print_output(req2)
+            self.print_output(req1)
+            self.print_output(req2)
 
             # stat.report()
 
@@ -267,6 +267,6 @@ class SwappingPipeline(SimplePipeline):
             req1.free()
             req2.free()
             # torch.cuda.empty_cache()
-        
+
         self._unregister_from_layer_completion()
 

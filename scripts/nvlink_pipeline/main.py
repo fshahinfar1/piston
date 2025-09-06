@@ -4,7 +4,7 @@ import sys
 
 import argparse
 
-from core.entities import Request
+from core.entity import Request
 from core.pipeline import SimplePipeline, SwappingPipeline
 from constants import *
 
