@@ -57,12 +57,19 @@ class SwappingPipeline(SimplePipeline):
             stage.unregister('layer_finish', self._move_kv_cache_layer)
 
     def _finish_req_iter(self, req) -> None:
-        logits = self.replica.lm_head(req.next_token_ids)
+        logits = self.replica.lm_head(req.hidden_states)
         logits = logits.float()
         next_token_logits = logits[:, -1, :]
         next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
         req.next_token_ids = next_token
         req.generated.append(next_token)
+
+        # Update attention to use the new token
+        mask = req.attention_mask
+        mask = torch.cat([mask, mask.new_ones((mask.size(0), 1))], dim=-1)
+        req.attention_mask = mask 
+
+        req.clear_hidden_states()
 
     def _do_decode_on_stage(self, req1, stage_index, finish) -> None:
         """
@@ -79,20 +86,22 @@ class SwappingPipeline(SimplePipeline):
 
         with torch.Stream(device=stage.device) as s_cuda:
             with torch.no_grad():
-                out = stage.forward(req1.next_token_ids,
-                                    attention_mask=req1.attention_mask,
-                                    use_cache=True,
-                                    past_key_values=req1.cache)
+                out = stage.forward(req1)
 
             # Move the activation values to the next stage
-            req1.next_token_ids = out.last_hidden_state
+            # req1.next_token_ids = out.last_hidden_state
             # print('Req', req1.id, 'size:', req1.bytes())
 
             if finish:
                 # At this point an iteration of req1 is done
                 self._finish_req_iter(req1)
 
-            req1.next_token_ids = req1.next_token_ids.to(next_stage.device, non_blocking=True)
+            # req1.next_token_ids = req1.next_token_ids.to(next_stage.device, non_blocking=True)
+            req1.move_hidden_state_to(next_stage.device, non_blocking=True)
+
+            if finish:
+                # Get ready for the generation of next token
+                req1.hidden_states = req1.next_token_ids
 
     def _do_move_kv_cache_layer(self, stage_index, layer_index):
         """
@@ -159,31 +168,19 @@ class SwappingPipeline(SimplePipeline):
         # NOTE: When the worker finishes processing a layer _move_kv_cache_layer
         # is called and that layers KV cache is moved
 
-        def local_load_other_req():
+        def wait_all():
             # wait until req1 calculation is over
             promise.wait()
 
-            # wait until req1 kv cache is copied
+            # wait until each layer of kv cache is swapped
             for p in self._in_flight_copies[stage_index]:
                 p.wait()
             self._in_flight_copies[stage_index].clear()
             # torch.cuda.synchronize(stage.device)
 
-            # Move the KV-Cache layers from the spare memory to this stage
-            # This step must happen after 1) forward pass & 2) moving KV to
-            # spare memory. Otherwise we must run out of memory when we are
-            # fully utilizing the GPUs
-            # num_layers = len(req2.cache.layers)
-            # per_layer =  int(num_layers // 2)
-            # f = stage.first_layer_index
-            # t = f + per_layer
-            # dev_map = [None] * num_layers
-            # dev_map[f:t] = [stage.device, ] * per_layer
-            # req2.move_to(dev_map, non_blocking=True)
-
         # NOTE: Add the task to the same worker that we assigned MLP feed
-        # forward.  because we are waiting for its completion anyway.
-        promise2 = worker.add_task(local_load_other_req)
+        # forward
+        promise2 = worker.add_task(wait_all)
 
         return promise2
 
@@ -227,8 +224,11 @@ class SwappingPipeline(SimplePipeline):
             # Move batch of requests to GPUs
             req1.move_to(dev_map, non_blocking=True)
             req2.move_to(dev_spare_mem, non_blocking=True)
-            torch.cuda.synchronize()
+            # torch.cuda.synchronize()
 
+
+            req1.hidden_states = req1.next_token_ids
+            req2.hidden_states = req2.next_token_ids
             # stat = ExecutionStatistics(self.num_stages)
 
             # Start by running processing on stage 0 and passing the hidden-state to stage 1
@@ -238,21 +238,36 @@ class SwappingPipeline(SimplePipeline):
 
             # TODO: Improve the code to support multiple stages not just two
             for _ in range(self.max_length):
+                # print('xxx')
+                # print(req2.attention_mask)
                 # Calculate req2 on stage 0 and initiate swapping back to req1
-                x = self.swapping_decode_on_stage(req2, req1, 0, finish=False)
+                # x = self.swapping_decode_on_stage(req2, req1, 0, finish=False)
+                # x.wait()
+                print('yyy')
+                print(req1.cache_position)
                 # Also involve the second stage in processing
                 y = self.swapping_decode_on_stage(req1, req2, 1, finish=True)
-
-                x.wait()
                 y.wait()
+
+                # x.wait()
+                # y.wait()
                 # torch.cuda.synchronize()
 
                 # Complete a swapping cycle
+                print('zzz')
+                print(req1.cache_position)
                 x = self.swapping_decode_on_stage(req1, req2, 0, finish=False) # TODO: on the last iteration we should not do this
-                y = self.swapping_decode_on_stage(req2, req1, 1, finish=True)
-
                 x.wait()
-                y.wait()
+
+                req1.move_to(dev_map)
+
+                # print('www')
+                # print(req2.attention_mask)
+                # y = self.swapping_decode_on_stage(req2, req1, 1, finish=True)
+                # y.wait()
+
+                # x.wait()
+                # y.wait()
                 # torch.cuda.synchronize()
 
             self.print_output(req1)

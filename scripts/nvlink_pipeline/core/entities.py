@@ -50,7 +50,7 @@ class SubModel(Observable):
     def forward(self, req):
         input_ids = req.hidden_states
         attention_mask = req.attention_mask
-        use_cache=True # always
+        use_cache = True # always
 
         inputs_embeds = input_ids
         if self.embed_tokens is not None:

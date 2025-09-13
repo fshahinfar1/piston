@@ -33,6 +33,20 @@ class Request:
 
         self._pre_move_state: Dict[int, List[Tuple[int, torch.Tensor, torch.Tensor]]] = {}
 
+    def move_hidden_state_to(self, device, non_blocking=False) -> None:
+        if self.hidden_states is not None:
+            self.hidden_states = self.hidden_states.to(device, non_blocking=non_blocking)
+
+        if self.position_ids is not None:
+            self.position_ids = self.position_ids.to(device, non_blocking=non_blocking)
+
+        if self.cache_position is not None:
+            self.cache_position = self.cache_position.to(device, non_blocking=non_blocking)
+
+        if self.causal_mask is not None:
+            self.causal_mask = self.causal_mask.to(device, non_blocking=non_blocking)
+        # self.position_embeddings = self.position_embeddings.to(device, non_blocking=non_blocking)
+
     def move_to(self, device_map, non_blocking=False) -> None:
         """
         Move KV cache of request to the given devices device map indicates for
