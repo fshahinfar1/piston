@@ -1,0 +1,780 @@
+Loading cuda/12.2
+  Loading requirement: libiconv/1.17-nhc3mhm xz/5.4.6-xxxg42c
+    zlib-ng/2.1.6-jkgunjc libxml2/2.10.3-zbbe7lm
+Loading python/3.11.7
+  Loading requirement: bzip2/1.0.8-ib3znej libmd/1.0.4-2km2lxx
+    libbsd/0.12.1-oocs6an expat/2.6.2-p2t4wry ncurses/6.5-svfl57u
+    readline/8.2-zeda6mx gdbm/1.23-wiol7vk pigz/2.8-5bwzpml zstd/1.5.6-uq5yyux
+    tar/1.34-jgektnv gettext/0.22.5-hsxgafg libffi/3.4.6-4vs4jpp
+    libxcrypt/4.4.35-7om46b5 sqlite/3.43.2-4kl5mnp
+    util-linux-uuid/2.38.1-5achpds
+Sun Sep 14 12:37:45 2025       
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 535.54.03              Driver Version: 535.54.03    CUDA Version: 12.2     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  NVIDIA A100-SXM-64GB           On  | 00000000:1D:00.0 Off |                    0 |
+| N/A   42C    P0              62W / 470W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   1  NVIDIA A100-SXM-64GB           On  | 00000000:56:00.0 Off |                    0 |
+| N/A   43C    P0              63W / 468W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   2  NVIDIA A100-SXM-64GB           On  | 00000000:C8:00.0 Off |                    0 |
+| N/A   42C    P0              62W / 466W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+                                                                                         
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|  No running processes found                                                           |
++---------------------------------------------------------------------------------------+
+	[4mGPU0	GPU1	GPU2	NIC0	NIC1	NIC2	NIC3	CPU Affinity	NUMA Affinity	GPU NUMA ID[0m
+GPU0	 X 	NV4	NV4	PXB	SYS	SYS	SYS	0-7	0-1		N/A
+GPU1	NV4	 X 	NV4	SYS	PXB	SYS	SYS	0-7	0-1		N/A
+GPU2	NV4	NV4	 X 	SYS	SYS	SYS	PXB	0-7	0-1		N/A
+NIC0	PXB	SYS	SYS	 X 	SYS	SYS	SYS				
+NIC1	SYS	PXB	SYS	SYS	 X 	SYS	SYS				
+NIC2	SYS	SYS	SYS	SYS	SYS	 X 	SYS				
+NIC3	SYS	SYS	PXB	SYS	SYS	SYS	 X 				
+
+Legend:
+
+  X    = Self
+  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)
+  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node
+  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)
+  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)
+  PIX  = Connection traversing at most a single PCIe bridge
+  NV#  = Connection traversing a bonded set of # NVLinks
+
+NIC Legend:
+
+  NIC0: mlx5_0
+  NIC1: mlx5_1
+  NIC2: mlx5_2
+  NIC3: mlx5_3
+
+python ./main.py --batch 1 --num-requests 8 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 8 requests
+Batch size is: 1
+Req 16 size: 203296816
+Req 15 size: 203296816
+Req 14 size: 204476488
+Req 13 size: 203296816
+Req 12 size: 203296816
+Req 11 size: 204476488
+Req 10 size: 203296816
+Req 9 size: 203296816
+Time to process 8 requests: 98.70 seconds
+------------------------------
+python ./main.py --batch 1 --num-requests 8 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 8 requests
+Batch size is: 1
+Req 16 size: 203493424
+Req 15 size: 203296816
+Req 14 size: 204673096
+Req 13 size: 203296816
+Req 12 size: 203493424
+Req 11 size: 204476488
+Req 10 size: 203493424
+Req 9 size: 203296816
+Time to process 8 requests: 82.88 seconds
+------------------------------
+python ./main.py --batch 2 --num-requests 16 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 16 requests
+Batch size is: 2
+Req 24 size: 408952976
+Req 23 size: 406593632
+Req 22 size: 408952976
+Req 21 size: 408952976
+Req 20 size: 406593632
+Req 19 size: 408952976
+Req 18 size: 408952976
+Req 17 size: 406593632
+Time to process 16 requests: 100.29 seconds
+------------------------------
+python ./main.py --batch 2 --num-requests 16 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 16 requests
+Batch size is: 2
+Req 24 size: 409346192
+Req 23 size: 406593632
+Req 22 size: 409346192
+Req 21 size: 408952976
+Req 20 size: 406986848
+Req 19 size: 408952976
+Req 18 size: 409346192
+Req 17 size: 406593632
+Time to process 16 requests: 83.40 seconds
+------------------------------
+python ./main.py --batch 3 --num-requests 24 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 24 requests
+Batch size is: 3
+Req 32 size: 613429464
+Req 31 size: 613429464
+Req 30 size: 613429464
+Req 29 size: 613429464
+Req 28 size: 613429464
+Req 27 size: 613429464
+Req 26 size: 613429464
+Req 25 size: 613429464
+Time to process 24 requests: 100.88 seconds
+------------------------------
+python ./main.py --batch 3 --num-requests 24 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 24 requests
+Batch size is: 3
+Req 32 size: 614019288
+Req 31 size: 613429464
+Req 30 size: 614019288
+Req 29 size: 613429464
+Req 28 size: 614019288
+Req 27 size: 613429464
+Req 26 size: 614019288
+Req 25 size: 613429464
+Time to process 24 requests: 84.05 seconds
+------------------------------
+python ./main.py --batch 4 --num-requests 32 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 32 requests
+Batch size is: 4
+Req 40 size: 817905952
+Req 39 size: 817905952
+Req 38 size: 817905952
+Req 37 size: 817905952
+Req 36 size: 817905952
+Req 35 size: 817905952
+Req 34 size: 817905952
+Req 33 size: 817905952
+Time to process 32 requests: 103.16 seconds
+------------------------------
+python ./main.py --batch 4 --num-requests 32 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 32 requests
+Batch size is: 4
+Req 40 size: 818692384
+Req 39 size: 817905952
+Req 38 size: 818692384
+Req 37 size: 817905952
+Req 36 size: 818692384
+Req 35 size: 817905952
+Req 34 size: 818692384
+Req 33 size: 817905952
+Time to process 32 requests: 83.89 seconds
+------------------------------
+python ./main.py --batch 5 --num-requests 40 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 40 requests
+Batch size is: 5
+Req 48 size: 1022382440
+Req 47 size: 1022382440
+Req 46 size: 1022382440
+Req 45 size: 1022382440
+Req 44 size: 1022382440
+Req 43 size: 1022382440
+Req 42 size: 1022382440
+Req 41 size: 1022382440
+Time to process 40 requests: 102.93 seconds
+------------------------------
+python ./main.py --batch 5 --num-requests 40 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 40 requests
+Batch size is: 5
+Req 48 size: 1023365480
+Req 47 size: 1022382440
+Req 46 size: 1023365480
+Req 45 size: 1022382440
+Req 44 size: 1023365480
+Req 43 size: 1022382440
+Req 42 size: 1023365480
+Req 41 size: 1022382440
+Time to process 40 requests: 84.47 seconds
+------------------------------
+python ./main.py --batch 6 --num-requests 48 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 48 requests
+Batch size is: 6
+Req 56 size: 1226858928
+Req 55 size: 1226858928
+Req 54 size: 1226858928
+Req 53 size: 1226858928
+Req 52 size: 1226858928
+Req 51 size: 1226858928
+Req 50 size: 1226858928
+Req 49 size: 1226858928
+Time to process 48 requests: 101.60 seconds
+------------------------------
+python ./main.py --batch 6 --num-requests 48 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 48 requests
+Batch size is: 6
+Req 56 size: 1228038576
+Req 55 size: 1226858928
+Req 54 size: 1228038576
+Req 53 size: 1226858928
+Req 52 size: 1228038576
+Req 51 size: 1226858928
+Req 50 size: 1228038576
+Req 49 size: 1226858928
+Time to process 48 requests: 85.00 seconds
+------------------------------
+python ./main.py --batch 7 --num-requests 56 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 56 requests
+Batch size is: 7
+Req 64 size: 1431335416
+Req 63 size: 1431335416
+Req 62 size: 1431335416
+Req 61 size: 1431335416
+Req 60 size: 1431335416
+Req 59 size: 1431335416
+Req 58 size: 1431335416
+Req 57 size: 1431335416
+Time to process 56 requests: 103.23 seconds
+------------------------------
+python ./main.py --batch 7 --num-requests 56 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 56 requests
+Batch size is: 7
+Req 64 size: 1432711672
+Req 63 size: 1431335416
+Req 62 size: 1432711672
+Req 61 size: 1431335416
+Req 60 size: 1432711672
+Req 59 size: 1431335416
+Req 58 size: 1432711672
+Req 57 size: 1431335416
+Time to process 56 requests: 86.40 seconds
+------------------------------
+python ./main.py --batch 8 --num-requests 64 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 64 requests
+Batch size is: 8
+Req 72 size: 1635811904
+Req 71 size: 1635811904
+Req 70 size: 1635811904
+Req 69 size: 1635811904
+Req 68 size: 1635811904
+Req 67 size: 1635811904
+Req 66 size: 1635811904
+Req 65 size: 1635811904
+Time to process 64 requests: 103.13 seconds
+------------------------------
+python ./main.py --batch 8 --num-requests 64 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 64 requests
+Batch size is: 8
+Req 72 size: 1637384768
+Req 71 size: 1635811904
+Req 70 size: 1637384768
+Req 69 size: 1635811904
+Req 68 size: 1637384768
+Req 67 size: 1635811904
+Req 66 size: 1637384768
+Req 65 size: 1635811904
+Time to process 64 requests: 85.73 seconds
+------------------------------
+python ./main.py --batch 9 --num-requests 72 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 72 requests
+Batch size is: 9
+Req 80 size: 1840288392
+Req 79 size: 1840288392
+Req 78 size: 1840288392
+Req 77 size: 1840288392
+Req 76 size: 1840288392
+Req 75 size: 1840288392
+Req 74 size: 1840288392
+Req 73 size: 1840288392
+Time to process 72 requests: 103.49 seconds
+------------------------------
+python ./main.py --batch 9 --num-requests 72 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 72 requests
+Batch size is: 9
+Req 80 size: 1842057864
+Req 79 size: 1840288392
+Req 78 size: 1842057864
+Req 77 size: 1840288392
+Req 76 size: 1842057864
+Req 75 size: 1840288392
+Req 74 size: 1842057864
+Req 73 size: 1840288392
+Time to process 72 requests: 90.55 seconds
+------------------------------
+python ./main.py --batch 10 --num-requests 80 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 80 requests
+Batch size is: 10
+Req 88 size: 2044764880
+Req 87 size: 2044764880
+Req 86 size: 2044764880
+Req 85 size: 2044764880
+Req 84 size: 2044764880
+Req 83 size: 2044764880
+Req 82 size: 2044764880
+Req 81 size: 2044764880
+Time to process 80 requests: 103.26 seconds
+------------------------------
+python ./main.py --batch 10 --num-requests 80 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 80 requests
+Batch size is: 10
+Req 88 size: 2046730960
+Req 87 size: 2044764880
+Req 86 size: 2046730960
+Req 85 size: 2044764880
+Req 84 size: 2046730960
+Req 83 size: 2044764880
+Req 82 size: 2046730960
+Req 81 size: 2044764880
+Time to process 80 requests: 101.70 seconds
+------------------------------
+python ./main.py --batch 11 --num-requests 88 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 88 requests
+Batch size is: 11
+Req 96 size: 2249241368
+Req 95 size: 2249241368
+Req 94 size: 2249241368
+Req 93 size: 2249241368
+Req 92 size: 2249241368
+Req 91 size: 2249241368
+Req 90 size: 2249241368
+Req 89 size: 2249241368
+Time to process 88 requests: 102.81 seconds
+------------------------------
+python ./main.py --batch 11 --num-requests 88 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 88 requests
+Batch size is: 11
+Req 96 size: 2251404056
+Req 95 size: 2249241368
+Req 94 size: 2251404056
+Req 93 size: 2249241368
+Req 92 size: 2251404056
+Req 91 size: 2249241368
+Req 90 size: 2251404056
+Req 89 size: 2249241368
+Time to process 88 requests: 90.02 seconds
+------------------------------
+python ./main.py --batch 12 --num-requests 96 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 96 requests
+Batch size is: 12
+Req 104 size: 2453717856
+Req 103 size: 2453717856
+Req 102 size: 2453717856
+Req 101 size: 2453717856
+Req 100 size: 2453717856
+Req 99 size: 2453717856
+Req 98 size: 2453717856
+Req 97 size: 2453717856
+Time to process 96 requests: 102.51 seconds
+------------------------------
+python ./main.py --batch 12 --num-requests 96 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 96 requests
+Batch size is: 12
+Req 104 size: 2456077152
+Req 103 size: 2453717856
+Req 102 size: 2456077152
+Req 101 size: 2453717856
+Req 100 size: 2456077152
+Req 99 size: 2453717856
+Req 98 size: 2456077152
+Req 97 size: 2453717856
+Time to process 96 requests: 116.71 seconds
+------------------------------
+python ./main.py --batch 13 --num-requests 104 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 104 requests
+Batch size is: 13
+Req 112 size: 2658194344
+Req 111 size: 2658194344
+Req 110 size: 2658194344
+Req 109 size: 2658194344
+Req 108 size: 2658194344
+Req 107 size: 2658194344
+Req 106 size: 2658194344
+Req 105 size: 2658194344
+Time to process 104 requests: 103.42 seconds
+------------------------------
+python ./main.py --batch 13 --num-requests 104 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 104 requests
+Batch size is: 13
+Req 112 size: 2660750248
+Req 111 size: 2658194344
+Req 110 size: 2660750248
+Req 109 size: 2658194344
+Req 108 size: 2660750248
+Req 107 size: 2658194344
+Req 106 size: 2660750248
+Req 105 size: 2658194344
+Time to process 104 requests: 94.25 seconds
+------------------------------
+python ./main.py --batch 14 --num-requests 112 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 112 requests
+Batch size is: 14
+Req 120 size: 2862670832
+Req 119 size: 2862670832
+Req 118 size: 2862670832
+Req 117 size: 2862670832
+Req 116 size: 2862670832
+Req 115 size: 2862670832
+Req 114 size: 2862670832
+Req 113 size: 2862670832
+Time to process 112 requests: 102.27 seconds
+------------------------------
+python ./main.py --batch 14 --num-requests 112 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 112 requests
+Batch size is: 14
+Req 120 size: 2865423344
+Req 119 size: 2862670832
+Req 118 size: 2865423344
+Req 117 size: 2862670832
+Req 116 size: 2865423344
+Req 115 size: 2862670832
+Req 114 size: 2865423344
+Req 113 size: 2862670832
+Time to process 112 requests: 129.13 seconds
+------------------------------
+python ./main.py --batch 15 --num-requests 120 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 120 requests
+Batch size is: 15
+Req 128 size: 3067147320
+Req 127 size: 3067147320
+Req 126 size: 3067147320
+Req 125 size: 3067147320
+Req 124 size: 3067147320
+Req 123 size: 3067147320
+Req 122 size: 3067147320
+Req 121 size: 3067147320
+Time to process 120 requests: 103.64 seconds
+------------------------------
+python ./main.py --batch 15 --num-requests 120 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 120 requests
+Batch size is: 15
+Req 128 size: 3070096440
+Req 127 size: 3067147320
+Req 126 size: 3070096440
+Req 125 size: 3067147320
+Req 124 size: 3070096440
+Req 123 size: 3067147320
+Req 122 size: 3070096440
+Req 121 size: 3067147320
+Time to process 120 requests: 98.40 seconds
+------------------------------
+python ./main.py --batch 16 --num-requests 128 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 128 requests
+Batch size is: 16
+Req 136 size: 3271623808
+Req 135 size: 3271623808
+Req 134 size: 3271623808
+Req 133 size: 3271623808
+Req 132 size: 3271623808
+Req 131 size: 3271623808
+Req 130 size: 3271623808
+Req 129 size: 3271623808
+Time to process 128 requests: 103.87 seconds
+------------------------------
+python ./main.py --batch 16 --num-requests 128 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 128 requests
+Batch size is: 16
+Req 136 size: 3274769536
+Req 135 size: 3271623808
+Req 134 size: 3274769536
+Req 133 size: 3271623808
+Req 132 size: 3274769536
+Req 131 size: 3271623808
+Req 130 size: 3274769536
+Req 129 size: 3271623808
+Time to process 128 requests: 101.95 seconds
+------------------------------
+python ./main.py --batch 17 --num-requests 136 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 136 requests
+Batch size is: 17
+Req 144 size: 3476100296
+Req 143 size: 3476100296
+Req 142 size: 3476100296
+Req 141 size: 3476100296
+Req 140 size: 3476100296
+Req 139 size: 3476100296
+Req 138 size: 3476100296
+Req 137 size: 3476100296
+Time to process 136 requests: 103.56 seconds
+------------------------------
+python ./main.py --batch 17 --num-requests 136 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 136 requests
+Batch size is: 17
+Req 144 size: 3479442632
+Req 143 size: 3476100296
+Req 142 size: 3479442632
+Req 141 size: 3476100296
+Req 140 size: 3479442632
+Req 139 size: 3476100296
+Req 138 size: 3479442632
+Req 137 size: 3476100296
+Time to process 136 requests: 102.54 seconds
+------------------------------
+python ./main.py --batch 18 --num-requests 144 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 144 requests
+Batch size is: 18
+Req 152 size: 3680576784
+Req 151 size: 3680576784
+Req 150 size: 3680576784
+Req 149 size: 3680576784
+Req 148 size: 3680576784
+Req 147 size: 3680576784
+Req 146 size: 3680576784
+Req 145 size: 3680576784
+Time to process 144 requests: 105.02 seconds
+------------------------------
+python ./main.py --batch 18 --num-requests 144 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 144 requests
+Batch size is: 18
+Req 152 size: 3684115728
+Req 151 size: 3680576784
+Req 150 size: 3684115728
+Req 149 size: 3680576784
+Req 148 size: 3684115728
+Req 147 size: 3680576784
+Req 146 size: 3684115728
+Req 145 size: 3680576784
+Time to process 144 requests: 172.28 seconds
+------------------------------
+python ./main.py --batch 19 --num-requests 152 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 152 requests
+Batch size is: 19
+Req 160 size: 3885053272
+Req 159 size: 3885053272
+Req 158 size: 3885053272
+Req 157 size: 3885053272
+Req 156 size: 3885053272
+Req 155 size: 3885053272
+Req 154 size: 3885053272
+Req 153 size: 3885053272
+Time to process 152 requests: 105.04 seconds
+------------------------------
+python ./main.py --batch 19 --num-requests 152 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 152 requests
+Batch size is: 19
+Req 160 size: 3888788824
+Req 159 size: 3885053272
+Req 158 size: 3888788824
+Req 157 size: 3885053272
+Req 156 size: 3888788824
+Req 155 size: 3885053272
+Req 154 size: 3888788824
+Req 153 size: 3885053272
+Time to process 152 requests: 191.76 seconds
+------------------------------
+python ./main.py --batch 20 --num-requests 160 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 160 requests
+Batch size is: 20
+Req 168 size: 4089529760
+Req 167 size: 4089529760
+Req 166 size: 4089529760
+Req 165 size: 4089529760
+Req 164 size: 4089529760
+Req 163 size: 4089529760
+Req 162 size: 4089529760
+Req 161 size: 4089529760
+Time to process 160 requests: 105.80 seconds
+------------------------------
+python ./main.py --batch 20 --num-requests 160 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 160 requests
+Batch size is: 20
+Req 168 size: 4093461920
+Req 167 size: 4089529760
+Req 166 size: 4093461920
+Req 165 size: 4089529760
+Req 164 size: 4093461920
+Req 163 size: 4089529760
+Req 162 size: 4093461920
+Req 161 size: 4089529760
+Time to process 160 requests: 212.68 seconds
+------------------------------
+python ./main.py --batch 21 --num-requests 168 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 168 requests
+Batch size is: 21
+Req 176 size: 4294006248
+Req 175 size: 4294006248
+Req 174 size: 4294006248
+Req 173 size: 4294006248
+Req 172 size: 4294006248
+Req 171 size: 4294006248
+Req 170 size: 4294006248
+Req 169 size: 4294006248
+Time to process 168 requests: 107.26 seconds
+------------------------------
+python ./main.py --batch 21 --num-requests 168 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 168 requests
+Batch size is: 21
+Req 176 size: 4298135016
+Req 175 size: 4294006248
+Req 174 size: 4298135016
+Req 173 size: 4294006248
+Req 172 size: 4298135016
+Req 171 size: 4294006248
+Req 170 size: 4298135016
+Req 169 size: 4294006248
+Time to process 168 requests: 236.92 seconds
+------------------------------
+python ./main.py --batch 22 --num-requests 176 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 176 requests
+Batch size is: 22
+Req 184 size: 4498482736
+Req 183 size: 4498482736
+Req 182 size: 4498482736
+Req 181 size: 4498482736
+Req 180 size: 4498482736
+Req 179 size: 4498482736
+Req 178 size: 4498482736
+Req 177 size: 4498482736
+Time to process 176 requests: 107.81 seconds
+------------------------------
+python ./main.py --batch 22 --num-requests 176 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 176 requests
+Batch size is: 22
+Req 184 size: 4502808112
+Req 183 size: 4498482736
+Req 182 size: 4502808112
+Req 181 size: 4498482736
+Req 180 size: 4502808112
+Req 179 size: 4498482736
+Req 178 size: 4502808112
+Req 177 size: 4498482736
+Time to process 176 requests: 253.82 seconds
+------------------------------
+python ./main.py --batch 23 --num-requests 184 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 184 requests
+Batch size is: 23
+Req 192 size: 4702959224
+Req 191 size: 4702959224
+Req 190 size: 4702959224
+Req 189 size: 4702959224
+Req 188 size: 4702959224
+Req 187 size: 4702959224
+Req 186 size: 4702959224
+Req 185 size: 4702959224
+Time to process 184 requests: 109.60 seconds
+------------------------------
+python ./main.py --batch 23 --num-requests 184 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 184 requests
+Batch size is: 23
+Req 192 size: 4707481208
+Req 191 size: 4702959224
+Req 190 size: 4707481208
+Req 189 size: 4702959224
+Req 188 size: 4707481208
+Req 187 size: 4702959224
+Req 186 size: 4707481208
+Req 185 size: 4702959224
+Time to process 184 requests: 271.15 seconds
+------------------------------
+python ./main.py --batch 24 --num-requests 192 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 192 requests
+Batch size is: 24
+Req 200 size: 4907435712
+Req 199 size: 4907435712
+Req 198 size: 4907435712
+Req 197 size: 4907435712
+Req 196 size: 4907435712
+Req 195 size: 4907435712
+Req 194 size: 4907435712
+Req 193 size: 4907435712
+Time to process 192 requests: 110.90 seconds
+------------------------------
+python ./main.py --batch 24 --num-requests 192 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 192 requests
+Batch size is: 24
+Req 200 size: 4912154304
+Req 199 size: 4907435712
+Req 198 size: 4912154304
+Req 197 size: 4907435712
+Req 196 size: 4912154304
+Req 195 size: 4907435712
+Req 194 size: 4912154304
+Req 193 size: 4907435712
+Time to process 192 requests: 289.14 seconds
+------------------------------
+python ./main.py --batch 25 --num-requests 200 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 200 requests
+Batch size is: 25
+Req 208 size: 5111912200
+Req 207 size: 5111912200
+Req 206 size: 5111912200
+Req 205 size: 5111912200
+Req 204 size: 5111912200
+Req 203 size: 5111912200
+Req 202 size: 5111912200
+Req 201 size: 5111912200
+Time to process 200 requests: 111.94 seconds
+------------------------------
+python ./main.py --batch 25 --num-requests 200 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 200 requests
+Batch size is: 25
+Req 208 size: 5116827400
+Req 207 size: 5111912200
+Req 206 size: 5116827400
+Req 205 size: 5111912200
+Req 204 size: 5116827400
+Req 203 size: 5111912200
+Req 202 size: 5116827400
+Req 201 size: 5111912200
+Time to process 200 requests: 304.32 seconds
+------------------------------
+python ./main.py --batch 26 --num-requests 208 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 208 requests
+Batch size is: 26
+Req 216 size: 5316388688
+Req 215 size: 5316388688
+Req 214 size: 5316388688
+Req 213 size: 5316388688
+Req 212 size: 5316388688
+Req 211 size: 5316388688
+Req 210 size: 5316388688
+Req 209 size: 5316388688
+Time to process 208 requests: 113.35 seconds
+------------------------------
+python ./main.py --batch 26 --num-requests 208 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
