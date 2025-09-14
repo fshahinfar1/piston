@@ -10,7 +10,7 @@ salloc \
     --cpus-per-task=4 \
     --gres=gpu:3 \
     --mem=16G \
-    --time=00:40:00 \
+    --time=02:00:00 \
 
 # ---
 

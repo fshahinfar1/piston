@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=8              # CPU cores allocated; tune as needed
 #SBATCH --gres=gpu:3                   # request two GPUs
 #SBATCH --mem=32G                      # request RAM, change xx as needed
-#SBATCH --time=02:00:00                # e.g. ten minutes of runtime
+#SBATCH --time=03:00:00                # e.g. ten minutes of runtime
 #SBATCH --output=output/stdout.txt
 #SBATCH --error=output/stderr.txt
 
@@ -41,9 +41,19 @@ OUTDIR=$HOME/results/
 mkdir -p $OUTDIR/simple
 mkdir -p $OUTDIR/swapping
 
-for B in $(seq 1 8); do
+for B in $(seq 1 32); do
     for P in  "simple" "swapping" ; do
-        python ./main.py --batch $B --num-requests 64 --pipeline $P --iters 1024 | tee $OUTDIR/$P/$B.txt
+        num_req=$((B*8))
+        outfile=$OUTDIR/$P/$B.txt
+
+        cmd="python ./main.py \
+          --batch $B \
+          --num-requests $num_req \
+          --pipeline $P \
+          --iters 512"
+
+        echo $cmd | tee $outfile
+        $cmd | tee -a $outfile
         echo '------------------------------'
     done
 done

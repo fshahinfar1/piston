@@ -13,7 +13,7 @@ from constants import *
 
 class SimplePipeline:
     def __init__(self, model_name: str, num_stages: int, device_list: List,
-                    max_length=32, batch_size: int=1):
+                    max_length=32, batch_size: int=1, do_print=False):
         self.num_stages = num_stages
         self.device_list = device_list
         self.replica = Replica(model_name, num_stages=num_stages, device_list=device_list)
@@ -26,15 +26,18 @@ class SimplePipeline:
         self.rx_queue: List[Request] = []
         self.run_queue: List[Request] = [] # Requests can actually be batched Rquests
 
+        self.do_print = do_print
+
     def close(self) -> None:
         return
 
     def print_output(self, req: Request) -> None:
         # Actually generate the text
-        generated = torch.cat([t.to(DEV_CPU) for t in req.generated], dim=-1)
-        final_text = self.replica.tokenizer.batch_decode(generated,
-                                                skip_special_tokens=True)
-        print(final_text)
+        if self.do_print:
+            generated = torch.cat([t.to(DEV_CPU) for t in req.generated], dim=-1)
+            final_text = self.replica.tokenizer.batch_decode(generated,
+                                                    skip_special_tokens=True)
+            print(final_text)
 
     def add_request(self, req):
         self.rx_queue.append(req)

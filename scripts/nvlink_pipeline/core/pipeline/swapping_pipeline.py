@@ -8,11 +8,12 @@ from utils.worker import Worker, Promise
 
 class SwappingPipeline(SimplePipeline):
     def __init__(self, spare_memory_device, model_name: str, num_stages: int, device_list: List,
-                    max_length=32, batch_size: int = 64):
+                    max_length=32, batch_size: int = 64, do_print=False):
 
         assert num_stages == 2, 'The implementation assumes there are two stages'
 
-        super().__init__(model_name, num_stages, device_list, max_length, batch_size)
+        super().__init__(model_name, num_stages, device_list, max_length,
+                            batch_size, do_print=False)
         # Device on which we hold temporary data
         self.spare_memory_device = spare_memory_device
 

@@ -45,15 +45,16 @@ def main():
     BATCH_SIZE = args.batch
     MAX_LENGTH = args.iters
     PILE_SIZE = args.num_requests
+    VERBOSE=False
 
     print('Running experiment with pipeline mode:', MODE)
     if MODE == 'simple':
         pipeline = SimplePipeline(model_name, num_stages, DEV_GPU_,
-            max_length=MAX_LENGTH, batch_size=BATCH_SIZE)
+            max_length=MAX_LENGTH, batch_size=BATCH_SIZE, do_print=VERBOSE)
     elif MODE == 'swapping':
         pipeline = SwappingPipeline(DEV_GPU_[2], model_name, num_stages,
                                     DEV_GPU_, max_length=MAX_LENGTH,
-                                    batch_size=BATCH_SIZE)
+                                    batch_size=BATCH_SIZE, do_print=VERBOSE)
     else:
         raise RuntimeError('Unexpected value for experiment mode')
 
