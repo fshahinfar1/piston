@@ -1,0 +1,13 @@
+python ./main.py --batch 17 --num-requests 136 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Processing a pile of 136 requests
+Batch size is: 17
+Req 144 size: 3479442632
+Req 143 size: 3476100296
+Req 142 size: 3479442632
+Req 141 size: 3476100296
+Req 140 size: 3479442632
+Req 139 size: 3476100296
+Req 138 size: 3479442632
+Req 137 size: 3476100296
+Time to process 136 requests: 102.54 seconds

@@ -1,0 +1,13 @@
+python ./main.py --batch 23 --num-requests 184 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Processing a pile of 184 requests
+Batch size is: 23
+Req 192 size: 4702959224
+Req 191 size: 4702959224
+Req 190 size: 4702959224
+Req 189 size: 4702959224
+Req 188 size: 4702959224
+Req 187 size: 4702959224
+Req 186 size: 4702959224
+Req 185 size: 4702959224
+Time to process 184 requests: 109.60 seconds

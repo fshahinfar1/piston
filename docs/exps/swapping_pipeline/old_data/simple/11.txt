@@ -1,0 +1,16 @@
+Running experiment with pipeline mode: simple
+Processing a pile of 64 requests
+Batch size is: 11
+---> num layers: 32 num floats: 28532736 shape: torch.Size([9, 32, 1032, 96])
+Req 70 size: 3652264584
+---> num layers: 32 num floats: 34873344 shape: torch.Size([11, 32, 1032, 96])
+Req 69 size: 4463878936
+---> num layers: 32 num floats: 34873344 shape: torch.Size([11, 32, 1032, 96])
+Req 68 size: 4463878936
+---> num layers: 32 num floats: 34873344 shape: torch.Size([11, 32, 1032, 96])
+Req 67 size: 4463878936
+---> num layers: 32 num floats: 34873344 shape: torch.Size([11, 32, 1032, 96])
+Req 66 size: 4463878936
+---> num layers: 32 num floats: 34873344 shape: torch.Size([11, 32, 1032, 96])
+Req 65 size: 4463878936
+Time to process 64 requests: 184.08 seconds

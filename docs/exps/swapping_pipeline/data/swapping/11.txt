@@ -1,16 +1,13 @@
+python ./main.py --batch 11 --num-requests 88 --pipeline swapping --iters 512
 Running experiment with pipeline mode: swapping
-Processing a pile of 64 requests
+Processing a pile of 88 requests
 Batch size is: 11
----> num layers: 32 num floats: 28560384 shape: torch.Size([9, 32, 1033, 96])
-Req 70 size: 3654034056
----> num layers: 32 num floats: 34873344 shape: torch.Size([11, 32, 1032, 96])
-Req 69 size: 4463878936
----> num layers: 32 num floats: 34907136 shape: torch.Size([11, 32, 1033, 96])
-Req 68 size: 4466041624
----> num layers: 32 num floats: 34873344 shape: torch.Size([11, 32, 1032, 96])
-Req 67 size: 4463878936
----> num layers: 32 num floats: 34907136 shape: torch.Size([11, 32, 1033, 96])
-Req 66 size: 4466041624
----> num layers: 32 num floats: 34873344 shape: torch.Size([11, 32, 1032, 96])
-Req 65 size: 4463878936
-Time to process 64 requests: 320.49 seconds
+Req 96 size: 2251404056
+Req 95 size: 2249241368
+Req 94 size: 2251404056
+Req 93 size: 2249241368
+Req 92 size: 2251404056
+Req 91 size: 2249241368
+Req 90 size: 2251404056
+Req 89 size: 2249241368
+Time to process 88 requests: 90.02 seconds

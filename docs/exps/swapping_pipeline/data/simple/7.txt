@@ -1,24 +1,13 @@
+python ./main.py --batch 7 --num-requests 56 --pipeline simple --iters 512
 Running experiment with pipeline mode: simple
-Processing a pile of 64 requests
+Processing a pile of 56 requests
 Batch size is: 7
----> num layers: 32 num floats: 3161088 shape: torch.Size([1, 32, 1029, 96])
-Req 74 size: 404627504
----> num layers: 32 num floats: 22192128 shape: torch.Size([7, 32, 1032, 96])
-Req 73 size: 2840650232
----> num layers: 32 num floats: 22192128 shape: torch.Size([7, 32, 1032, 96])
-Req 72 size: 2840650232
----> num layers: 32 num floats: 22192128 shape: torch.Size([7, 32, 1032, 96])
-Req 71 size: 2840650232
----> num layers: 32 num floats: 22192128 shape: torch.Size([7, 32, 1032, 96])
-Req 70 size: 2840650232
----> num layers: 32 num floats: 22192128 shape: torch.Size([7, 32, 1032, 96])
-Req 69 size: 2840650232
----> num layers: 32 num floats: 22192128 shape: torch.Size([7, 32, 1032, 96])
-Req 68 size: 2840650232
----> num layers: 32 num floats: 22192128 shape: torch.Size([7, 32, 1032, 96])
-Req 67 size: 2840650232
----> num layers: 32 num floats: 22192128 shape: torch.Size([7, 32, 1032, 96])
-Req 66 size: 2840650232
----> num layers: 32 num floats: 22192128 shape: torch.Size([7, 32, 1032, 96])
-Req 65 size: 2840650232
-Time to process 64 requests: 572.48 seconds
+Req 64 size: 1431335416
+Req 63 size: 1431335416
+Req 62 size: 1431335416
+Req 61 size: 1431335416
+Req 60 size: 1431335416
+Req 59 size: 1431335416
+Req 58 size: 1431335416
+Req 57 size: 1431335416
+Time to process 56 requests: 103.23 seconds

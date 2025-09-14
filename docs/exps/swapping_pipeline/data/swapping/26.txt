@@ -1,0 +1,2 @@
+python ./main.py --batch 26 --num-requests 208 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping

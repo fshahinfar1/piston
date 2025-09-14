@@ -1,18 +1,13 @@
+python ./main.py --batch 10 --num-requests 80 --pipeline simple --iters 512
 Running experiment with pipeline mode: simple
-Processing a pile of 64 requests
+Processing a pile of 80 requests
 Batch size is: 10
----> num layers: 32 num floats: 12681216 shape: torch.Size([4, 32, 1032, 96])
-Req 71 size: 1623228704
----> num layers: 32 num floats: 31703040 shape: torch.Size([10, 32, 1032, 96])
-Req 70 size: 4058071760
----> num layers: 32 num floats: 31703040 shape: torch.Size([10, 32, 1032, 96])
-Req 69 size: 4058071760
----> num layers: 32 num floats: 31703040 shape: torch.Size([10, 32, 1032, 96])
-Req 68 size: 4058071760
----> num layers: 32 num floats: 31703040 shape: torch.Size([10, 32, 1032, 96])
-Req 67 size: 4058071760
----> num layers: 32 num floats: 31703040 shape: torch.Size([10, 32, 1032, 96])
-Req 66 size: 4058071760
----> num layers: 32 num floats: 31703040 shape: torch.Size([10, 32, 1032, 96])
-Req 65 size: 4058071760
-Time to process 64 requests: 213.25 seconds
+Req 88 size: 2044764880
+Req 87 size: 2044764880
+Req 86 size: 2044764880
+Req 85 size: 2044764880
+Req 84 size: 2044764880
+Req 83 size: 2044764880
+Req 82 size: 2044764880
+Req 81 size: 2044764880
+Time to process 80 requests: 103.26 seconds

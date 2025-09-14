@@ -1,36 +1,13 @@
+python ./main.py --batch 4 --num-requests 32 --pipeline swapping --iters 512
 Running experiment with pipeline mode: swapping
-Processing a pile of 64 requests
+Processing a pile of 32 requests
 Batch size is: 4
----> num layers: 32 num floats: 12693504 shape: torch.Size([4, 32, 1033, 96])
-Req 80 size: 1624015136
----> num layers: 32 num floats: 12681216 shape: torch.Size([4, 32, 1032, 96])
-Req 79 size: 1623228704
----> num layers: 32 num floats: 12693504 shape: torch.Size([4, 32, 1033, 96])
-Req 78 size: 1624015136
----> num layers: 32 num floats: 12681216 shape: torch.Size([4, 32, 1032, 96])
-Req 77 size: 1623228704
----> num layers: 32 num floats: 12693504 shape: torch.Size([4, 32, 1033, 96])
-Req 76 size: 1624015136
----> num layers: 32 num floats: 12681216 shape: torch.Size([4, 32, 1032, 96])
-Req 75 size: 1623228704
----> num layers: 32 num floats: 12693504 shape: torch.Size([4, 32, 1033, 96])
-Req 74 size: 1624015136
----> num layers: 32 num floats: 12681216 shape: torch.Size([4, 32, 1032, 96])
-Req 73 size: 1623228704
----> num layers: 32 num floats: 12693504 shape: torch.Size([4, 32, 1033, 96])
-Req 72 size: 1624015136
----> num layers: 32 num floats: 12681216 shape: torch.Size([4, 32, 1032, 96])
-Req 71 size: 1623228704
----> num layers: 32 num floats: 12693504 shape: torch.Size([4, 32, 1033, 96])
-Req 70 size: 1624015136
----> num layers: 32 num floats: 12681216 shape: torch.Size([4, 32, 1032, 96])
-Req 69 size: 1623228704
----> num layers: 32 num floats: 12693504 shape: torch.Size([4, 32, 1033, 96])
-Req 68 size: 1624015136
----> num layers: 32 num floats: 12681216 shape: torch.Size([4, 32, 1032, 96])
-Req 67 size: 1623228704
----> num layers: 32 num floats: 12693504 shape: torch.Size([4, 32, 1033, 96])
-Req 66 size: 1624015136
----> num layers: 32 num floats: 12681216 shape: torch.Size([4, 32, 1032, 96])
-Req 65 size: 1623228704
-Time to process 64 requests: 446.94 seconds
+Req 40 size: 818692384
+Req 39 size: 817905952
+Req 38 size: 818692384
+Req 37 size: 817905952
+Req 36 size: 818692384
+Req 35 size: 817905952
+Req 34 size: 818692384
+Req 33 size: 817905952
+Time to process 32 requests: 83.89 seconds

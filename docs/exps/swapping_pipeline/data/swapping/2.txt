@@ -1,68 +1,13 @@
+python ./main.py --batch 2 --num-requests 16 --pipeline swapping --iters 512
 Running experiment with pipeline mode: swapping
-Processing a pile of 64 requests
+Processing a pile of 16 requests
 Batch size is: 2
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 96 size: 812007568
----> num layers: 32 num floats: 6322176 shape: torch.Size([2, 32, 1029, 96])
-Req 95 size: 809255008
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 94 size: 812007568
----> num layers: 32 num floats: 6340608 shape: torch.Size([2, 32, 1032, 96])
-Req 93 size: 811614352
----> num layers: 32 num floats: 6328320 shape: torch.Size([2, 32, 1030, 96])
-Req 92 size: 809648224
----> num layers: 32 num floats: 6340608 shape: torch.Size([2, 32, 1032, 96])
-Req 91 size: 811614352
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 90 size: 812007568
----> num layers: 32 num floats: 6322176 shape: torch.Size([2, 32, 1029, 96])
-Req 89 size: 809255008
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 88 size: 812007568
----> num layers: 32 num floats: 6340608 shape: torch.Size([2, 32, 1032, 96])
-Req 87 size: 811614352
----> num layers: 32 num floats: 6328320 shape: torch.Size([2, 32, 1030, 96])
-Req 86 size: 809648224
----> num layers: 32 num floats: 6340608 shape: torch.Size([2, 32, 1032, 96])
-Req 85 size: 811614352
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 84 size: 812007568
----> num layers: 32 num floats: 6322176 shape: torch.Size([2, 32, 1029, 96])
-Req 83 size: 809255008
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 82 size: 812007568
----> num layers: 32 num floats: 6340608 shape: torch.Size([2, 32, 1032, 96])
-Req 81 size: 811614352
----> num layers: 32 num floats: 6328320 shape: torch.Size([2, 32, 1030, 96])
-Req 80 size: 809648224
----> num layers: 32 num floats: 6340608 shape: torch.Size([2, 32, 1032, 96])
-Req 79 size: 811614352
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 78 size: 812007568
----> num layers: 32 num floats: 6322176 shape: torch.Size([2, 32, 1029, 96])
-Req 77 size: 809255008
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 76 size: 812007568
----> num layers: 32 num floats: 6340608 shape: torch.Size([2, 32, 1032, 96])
-Req 75 size: 811614352
----> num layers: 32 num floats: 6328320 shape: torch.Size([2, 32, 1030, 96])
-Req 74 size: 809648224
----> num layers: 32 num floats: 6340608 shape: torch.Size([2, 32, 1032, 96])
-Req 73 size: 811614352
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 72 size: 812007568
----> num layers: 32 num floats: 6322176 shape: torch.Size([2, 32, 1029, 96])
-Req 71 size: 809255008
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 70 size: 812007568
----> num layers: 32 num floats: 6340608 shape: torch.Size([2, 32, 1032, 96])
-Req 69 size: 811614352
----> num layers: 32 num floats: 6328320 shape: torch.Size([2, 32, 1030, 96])
-Req 68 size: 809648224
----> num layers: 32 num floats: 6340608 shape: torch.Size([2, 32, 1032, 96])
-Req 67 size: 811614352
----> num layers: 32 num floats: 6346752 shape: torch.Size([2, 32, 1033, 96])
-Req 66 size: 812007568
----> num layers: 32 num floats: 6322176 shape: torch.Size([2, 32, 1029, 96])
-Req 65 size: 809255008
-Time to process 64 requests: 769.87 seconds
+Req 24 size: 409346192
+Req 23 size: 406593632
+Req 22 size: 409346192
+Req 21 size: 408952976
+Req 20 size: 406986848
+Req 19 size: 408952976
+Req 18 size: 409346192
+Req 17 size: 406593632
+Time to process 16 requests: 83.40 seconds
