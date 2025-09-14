@@ -176,7 +176,8 @@ class SwappingPipeline(SimplePipeline):
             for p in self._in_flight_copies[stage_index]:
                 p.wait()
             self._in_flight_copies[stage_index].clear()
-            # torch.cuda.synchronize(stage.device)
+            # TODO: this seems needed, figure out why
+            torch.cuda.synchronize(stage.device)
 
         # NOTE: Add the task to the same worker that we assigned MLP feed
         # forward
@@ -220,12 +221,11 @@ class SwappingPipeline(SimplePipeline):
             req1.next_token_ids = req1.next_token_ids.to(stage_zero_dev)
             req2.next_token_ids = req2.next_token_ids.to(stage_zero_dev)
 
-            # TODO: maybe open two streams
+            # TODO: try to overlap loading new requests with processing of previous ones
             # Move batch of requests to GPUs
             req1.move_to(dev_map, non_blocking=True)
             req2.move_to(dev_spare_mem, non_blocking=True)
-            # torch.cuda.synchronize()
-
+            torch.cuda.synchronize()
 
             req1.hidden_states = req1.next_token_ids
             req2.hidden_states = req2.next_token_ids
@@ -234,41 +234,20 @@ class SwappingPipeline(SimplePipeline):
             # Start by running processing on stage 0 and passing the hidden-state to stage 1
             # while loading the req2 to stage 0
             self.swapping_decode_on_stage(req1, req2, 0, finish=False).wait()
-            # torch.cuda.synchronize()
 
             # TODO: Improve the code to support multiple stages not just two
             for _ in range(self.max_length):
-                # print('xxx')
-                # print(req2.attention_mask)
-                # Calculate req2 on stage 0 and initiate swapping back to req1
-                # x = self.swapping_decode_on_stage(req2, req1, 0, finish=False)
-                # x.wait()
-                print('yyy')
-                print(req1.cache_position)
-                # Also involve the second stage in processing
-                y = self.swapping_decode_on_stage(req1, req2, 1, finish=True)
+                x = self.swapping_decode_on_stage(req1, req2, 1, finish=True)
+                y = self.swapping_decode_on_stage(req2, req1, 0, finish=False)
+                x.wait()
                 y.wait()
 
-                # x.wait()
-                # y.wait()
-                # torch.cuda.synchronize()
-
                 # Complete a swapping cycle
-                print('zzz')
-                print(req1.cache_position)
-                x = self.swapping_decode_on_stage(req1, req2, 0, finish=False) # TODO: on the last iteration we should not do this
+                # TODO: on the last iteration we should not do this
+                x = self.swapping_decode_on_stage(req1, req2, 0, finish=False) 
+                y = self.swapping_decode_on_stage(req2, req1, 1, finish=True)
                 x.wait()
-
-                req1.move_to(dev_map)
-
-                # print('www')
-                # print(req2.attention_mask)
-                # y = self.swapping_decode_on_stage(req2, req1, 1, finish=True)
-                # y.wait()
-
-                # x.wait()
-                # y.wait()
-                # torch.cuda.synchronize()
+                y.wait()
 
             self.print_output(req1)
             self.print_output(req2)
