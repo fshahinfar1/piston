@@ -120,9 +120,11 @@ class SubModel(Observable):
 class Replica:
     def __init__(self, model_name, num_stages, device_list):
         model = AutoModelForCausalLM.from_pretrained(model_name,
-                torch_dtype=torch.float16, device_map='cpu',
+                device_map='cpu', torch_dtype=torch.float16,
                 local_files_only=LOCAL_FILE_ONLY)
         model.eval()
+
+        print('Loaded. Model size:', model.get_memory_footprint())
 
         assert num_stages > 0
         assert len(device_list) >= num_stages
@@ -164,6 +166,7 @@ class Replica:
         self.lm_head = model.lm_head
 
         for s in self.stages:
+            print('loading:', s.stage_index)
             # Move the submodels to their device
             s.ready()
             # input('continue? ')
