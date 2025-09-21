@@ -96,13 +96,11 @@ class SwappingPipeline(SimplePipeline):
             if finish:
                 # At this point an iteration of req1 is done
                 self._finish_req_iter(req1)
+                # Get ready for the generation of next token
+                req1.hidden_states = req1.next_token_ids
 
             # req1.next_token_ids = req1.next_token_ids.to(next_stage.device, non_blocking=True)
             req1.move_hidden_state_to(next_stage.device, non_blocking=True)
-
-            if finish:
-                # Get ready for the generation of next token
-                req1.hidden_states = req1.next_token_ids
 
     def _do_move_kv_cache_layer(self, stage_index, layer_index):
         """

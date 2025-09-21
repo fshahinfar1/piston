@@ -80,7 +80,8 @@ class SimplePipeline:
 
         self.print_output(req)
         # stat.report()
-        print('Req', req.id, 'size:', req.bytes())
+        tmp = req.cache.layers[0].keys.shape
+        print('Req', req.id, 'size:', req.cache_size_bytes(), 'number of tokens:', tmp[2], f'(shape: {tmp})')
         req.free()
 
     def process_requests(self)-> None:

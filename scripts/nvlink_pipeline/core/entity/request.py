@@ -45,7 +45,9 @@ class Request:
 
         if self.causal_mask is not None:
             self.causal_mask = self.causal_mask.to(device, non_blocking=non_blocking)
-        # self.position_embeddings = self.position_embeddings.to(device, non_blocking=non_blocking)
+
+        # if self.position_embeddings:
+        #     self.position_embeddings = self.position_embeddings.to(device, non_blocking=non_blocking)
 
     def move_to(self, device_map, non_blocking=False) -> None:
         """

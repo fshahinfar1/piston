@@ -113,7 +113,7 @@ class SubModel(Observable):
         req.position_ids = position_ids
         req.cache_position = cache_position
         req.causal_mask = causal_mask
-        req.position_embeddings = position_embeddings
+        # req.position_embeddings = position_embeddings
         req.hidden_states = hidden_states
 
 
@@ -173,6 +173,12 @@ class Replica:
         # move the lm_head to the last stage's device
         self.lm_head = self.lm_head.to(self.stages[-1].device)
 
+        # Let's see how much memory we are using after moving things to each GPU
+        torch.cuda.synchronize()
+        for d in device_list:
+            tmp = torch.cuda.memory_allocated(d) 
+            print(str(d), ':', 'Memory usage:', tmp)
+
     def get_kv_cache_token_size(self) -> int:
         """
         Approximately how much memory one token of kv cache will consume
@@ -208,7 +214,7 @@ class Replica:
 
                 # bring the input/hidden state to device
                 start = time.time()
-                req.hidden_states = req.hidden_states.to(stage.device, non_blocking=True)
+                req.move_hidden_state_to(stage.device, non_blocking=False)
 
                 if stats:
                     torch.cuda.synchronize(stage.device)
