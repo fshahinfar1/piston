@@ -31,13 +31,13 @@ def parse_args():
     parser.add_argument('--num-requests', type=int, default=32, help='total number of requests to process')
     parser.add_argument('--pipeline', type=str, default='simple', help='which type of pipeline use for requests processing (simple, swapping)')
     parser.add_argument('--iters', type=int, default=1024, help='number of tokens to generate')
+    parser.add_argument('--num-stages', type=int, default=2, help='number pipeline stages')
 
     args = parser.parse_args()
     return args
 
 
 def main():
-    num_stages = 2
     # model_name = 'microsoft/Phi-3.5-mini-instruct'
     model_name = '/leonardo_work/EUHPC_D17_077/fshahinf/dequantized/gpt-oss-20b-bf16'
 
@@ -47,6 +47,9 @@ def main():
     MAX_LENGTH = args.iters
     PILE_SIZE = args.num_requests
     VERBOSE=False
+    num_stages = args.num_stages
+
+    assert num_stages == 1 or num_stages == 2
 
     print('Running experiment with pipeline mode:', MODE)
     if MODE == 'simple':

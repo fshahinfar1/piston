@@ -47,7 +47,7 @@ set -e
 
 NUM_REQ=1024
 ITERATION=512
-BATCH_SIZES=( 1024 512 256 128 64 32 )
+BATCH_SIZES=( 512 256 128 64 32 16 1 )
 PIPELINE="simple"
 
 for B in ${BATCH_SIZES[@]}; do
@@ -57,6 +57,7 @@ for B in ${BATCH_SIZES[@]}; do
         --batch $B \
         --num-requests $NUM_REQ \
         --pipeline $PIPELINE \
+        --num-stages 1 \
         --iters $ITERATION"
 
       echo $cmd | tee $outfile
