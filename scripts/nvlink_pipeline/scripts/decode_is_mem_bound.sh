@@ -1,5 +1,6 @@
 #! /bin/bash
-#SBATCH --job-name pipeline_test 
+
+#SBATCH --job-name exp_decode_is_mem_bound 
 #SBATCH --account=euhpc_d17_077
 #SBATCH --partition=boost_usr_prod      # or your assigned partition
 #SBATCH --nodes=1                      # one node to ensure GPUs are on same physical machine
@@ -8,8 +9,8 @@
 #SBATCH --gres=gpu:3                   # request two GPUs
 #SBATCH --mem=128G                     # request RAM, change xx as needed
 #SBATCH --time=03:00:00                # e.g. ten minutes of runtime
-#SBATCH --output=output/stdout.txt
-#SBATCH --error=output/stderr.txt
+#SBATCH --output=out_is_mem_bound/stdout.txt
+#SBATCH --error=out_is_mem_bound/stderr.txt
 
 module load cuda/12.2
 module load python/3.11.7
@@ -37,31 +38,30 @@ if [ ! -d $TMPDIR ]; then
   mkdir $TMPDIR
 fi
 
-OUTDIR=$HOME/results/
+OUTDIR=$HOME/res_decode_is_mem_bound/
 mkdir -p $OUTDIR/simple
 mkdir -p $OUTDIR/swapping
 
 # Stop when there is an error
 set -e
 
-BATCHES=( 1 2 4 8 16 32 64 128 256 512 1024 2048 )
-ITERATIONS=512
+NUM_REQ=1024
+ITERATION=512
+BATCH_SIZES=( 1024 512 256 128 64 32 )
+PIPELINE="simple"
 
-for B in 2048 ; do
-    for P in  "swapping" "simple" ; do
-        num_req=$((B*8))
-        outfile=$OUTDIR/$P/$B.txt
+for B in ${BATCH_SIZES[@]}; do
+      outfile=$OUTDIR/$PIPELINE/$B.txt
 
-        cmd="python ./main.py \
-          --batch $B \
-          --num-requests $num_req \
-          --pipeline $P \
-          --iters $ITERATIONS"
+      cmd="python ./main.py \
+        --batch $B \
+        --num-requests $NUM_REQ \
+        --pipeline $PIPELINE \
+        --iters $ITERATION"
 
-        echo $cmd | tee $outfile
-        $cmd | tee -a $outfile
-        echo '------------------------------'
-    done
+      echo $cmd | tee $outfile
+      $cmd | tee -a $outfile
+      echo '------------------------------'
 done
 
 echo Done

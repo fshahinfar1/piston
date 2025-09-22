@@ -1,0 +1,1904 @@
+Loading cuda/12.2
+  Loading requirement: libiconv/1.17-nhc3mhm xz/5.4.6-xxxg42c
+    zlib-ng/2.1.6-jkgunjc libxml2/2.10.3-zbbe7lm
+Loading python/3.11.7
+  Loading requirement: bzip2/1.0.8-ib3znej libmd/1.0.4-2km2lxx
+    libbsd/0.12.1-oocs6an expat/2.6.2-p2t4wry ncurses/6.5-svfl57u
+    readline/8.2-zeda6mx gdbm/1.23-wiol7vk pigz/2.8-5bwzpml zstd/1.5.6-uq5yyux
+    tar/1.34-jgektnv gettext/0.22.5-hsxgafg libffi/3.4.6-4vs4jpp
+    libxcrypt/4.4.35-7om46b5 sqlite/3.43.2-4kl5mnp
+    util-linux-uuid/2.38.1-5achpds
+Sun Sep 21 16:31:35 2025       
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 535.54.03              Driver Version: 535.54.03    CUDA Version: 12.2     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  NVIDIA A100-SXM-64GB           On  | 00000000:1D:00.0 Off |                    0 |
+| N/A   43C    P0              64W / 483W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   1  NVIDIA A100-SXM-64GB           On  | 00000000:56:00.0 Off |                    0 |
+| N/A   43C    P0              64W / 477W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   2  NVIDIA A100-SXM-64GB           On  | 00000000:C8:00.0 Off |                    0 |
+| N/A   43C    P0              62W / 464W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+                                                                                         
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|  No running processes found                                                           |
++---------------------------------------------------------------------------------------+
+	[4mGPU0	GPU1	GPU2	NIC0	NIC1	NIC2	NIC3	CPU Affinity	NUMA Affinity	GPU NUMA ID[0m
+GPU0	 X 	NV4	NV4	PXB	SYS	SYS	SYS	0-7	0-1		N/A
+GPU1	NV4	 X 	NV4	SYS	PXB	SYS	SYS	0-7	0-1		N/A
+GPU2	NV4	NV4	 X 	SYS	SYS	SYS	PXB	0-7	0-1		N/A
+NIC0	PXB	SYS	SYS	 X 	SYS	SYS	SYS				
+NIC1	SYS	PXB	SYS	SYS	 X 	SYS	SYS				
+NIC2	SYS	SYS	SYS	SYS	SYS	 X 	SYS				
+NIC3	SYS	SYS	PXB	SYS	SYS	SYS	 X 				
+
+Legend:
+
+  X    = Self
+  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)
+  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node
+  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)
+  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)
+  PIX  = Connection traversing at most a single PCIe bridge
+  NV#  = Connection traversing a bonded set of # NVLinks
+
+NIC Legend:
+
+  NIC0: mlx5_0
+  NIC1: mlx5_1
+  NIC2: mlx5_2
+  NIC3: mlx5_3
+
+python ./main.py --batch 1 --num-requests 8 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 8 requests
+Batch size is: 1
+Req 16 size: 25391144
+Req 15 size: 25366568
+Req 14 size: 25538624
+Req 13 size: 25366568
+Req 12 size: 25391144
+Req 11 size: 25514048
+Req 10 size: 25391144
+Req 9 size: 25366568
+Time to process 8 requests: 98.52 seconds
+------------------------------
+python ./main.py --batch 1 --num-requests 8 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 8 requests
+Batch size is: 1
+Execution Statistics:
+Stage 0 execution times:
+		mean=20.2060 ms, std=0.8687, mid=20.1595, max=39.5424, count=512
+Stage 1 execution times:
+		mean=17.9807 ms, std=0.2038, mid=17.9831, max=21.8534, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7326 ms, std=0.2645, mid=0.7222, max=6.6588, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0002, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1241 ms, std=0.0021, mid=0.1237, max=0.1428, count=512
+		mean=0.0443 GB/s, std=0.0007, mid=0.0444, max=0.0458, count=512
+Req 16 size: 25362432 number of tokens: 516 (shape: torch.Size([1, 8, 516, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=20.1411 ms, std=0.1549, mid=20.1380, max=20.6015, count=512
+Stage 1 execution times:
+		mean=17.9608 ms, std=0.1132, mid=17.9644, max=18.1992, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7203 ms, std=0.0315, mid=0.7176, max=0.7446, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0002, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1232 ms, std=0.0020, mid=0.1228, max=0.1354, count=512
+		mean=0.0446 GB/s, std=0.0007, mid=0.0447, max=0.0462, count=512
+Req 15 size: 25362432 number of tokens: 516 (shape: torch.Size([1, 8, 516, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=20.1578 ms, std=0.1604, mid=20.1478, max=20.7355, count=512
+Stage 1 execution times:
+		mean=17.9676 ms, std=0.1177, mid=17.9696, max=18.1892, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7202 ms, std=0.0314, mid=0.7179, max=0.7446, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0002, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1233 ms, std=0.0021, mid=0.1230, max=0.1371, count=512
+		mean=0.0446 GB/s, std=0.0007, mid=0.0447, max=0.0464, count=512
+Req 14 size: 25509888 number of tokens: 519 (shape: torch.Size([1, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=20.3151 ms, std=3.7301, mid=20.1522, max=104.5642, count=512
+Stage 1 execution times:
+		mean=17.9666 ms, std=0.1128, mid=17.9654, max=18.1916, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7206 ms, std=0.0315, mid=0.7181, max=0.7446, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0002, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1233 ms, std=0.0023, mid=0.1230, max=0.1523, count=512
+		mean=0.0446 GB/s, std=0.0008, mid=0.0447, max=0.0461, count=512
+Req 13 size: 25362432 number of tokens: 516 (shape: torch.Size([1, 8, 516, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=20.1584 ms, std=0.1587, mid=20.1589, max=20.6292, count=512
+Stage 1 execution times:
+		mean=17.9661 ms, std=0.1175, mid=17.9725, max=18.1904, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7200 ms, std=0.0323, mid=0.7176, max=0.7448, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0002, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1234 ms, std=0.0021, mid=0.1230, max=0.1373, count=512
+		mean=0.0445 GB/s, std=0.0007, mid=0.0447, max=0.0461, count=512
+Req 12 size: 25362432 number of tokens: 516 (shape: torch.Size([1, 8, 516, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=20.1682 ms, std=0.1591, mid=20.1702, max=20.8509, count=512
+Stage 1 execution times:
+		mean=17.9727 ms, std=0.1167, mid=17.9771, max=18.2078, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7202 ms, std=0.0315, mid=0.7179, max=0.7448, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0002, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1232 ms, std=0.0021, mid=0.1228, max=0.1347, count=512
+		mean=0.0446 GB/s, std=0.0007, mid=0.0447, max=0.0464, count=512
+Req 11 size: 25509888 number of tokens: 519 (shape: torch.Size([1, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=20.1701 ms, std=0.1626, mid=20.1665, max=20.6747, count=512
+Stage 1 execution times:
+		mean=17.9711 ms, std=0.1146, mid=17.9754, max=18.2049, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7210 ms, std=0.0318, mid=0.7184, max=0.7451, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0002, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1233 ms, std=0.0020, mid=0.1228, max=0.1354, count=512
+		mean=0.0446 GB/s, std=0.0007, mid=0.0447, max=0.0463, count=512
+Req 10 size: 25362432 number of tokens: 516 (shape: torch.Size([1, 8, 516, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=20.1730 ms, std=0.1611, mid=20.1730, max=20.6630, count=512
+Stage 1 execution times:
+		mean=17.9678 ms, std=0.1134, mid=17.9769, max=18.1968, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7209 ms, std=0.0314, mid=0.7184, max=0.7441, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0002, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1240 ms, std=0.0027, mid=0.1235, max=0.1473, count=512
+		mean=0.0443 GB/s, std=0.0009, mid=0.0445, max=0.0460, count=512
+Req 9 size: 25362432 number of tokens: 516 (shape: torch.Size([1, 8, 516, 64]))
+Time to process 8 requests: 160.44 seconds
+------------------------------
+python ./main.py --batch 2 --num-requests 16 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 16 requests
+Batch size is: 2
+Req 24 size: 51077248
+Req 23 size: 50733136
+Req 22 size: 51077248
+Req 21 size: 51028096
+Req 20 size: 50782288
+Req 19 size: 51028096
+Req 18 size: 51077248
+Req 17 size: 50733136
+Time to process 16 requests: 100.25 seconds
+------------------------------
+python ./main.py --batch 2 --num-requests 16 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 16 requests
+Batch size is: 2
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.1560 ms, std=0.5364, mid=21.1246, max=30.2944, count=512
+Stage 1 execution times:
+		mean=19.0069 ms, std=0.2049, mid=19.0207, max=20.6153, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7366 ms, std=0.2578, mid=0.7255, max=6.5210, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0004, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1207 ms, std=0.0018, mid=0.1204, max=0.1323, count=512
+		mean=0.0910 GB/s, std=0.0013, mid=0.0912, max=0.0937, count=512
+Req 24 size: 51019776 number of tokens: 519 (shape: torch.Size([2, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.1137 ms, std=0.2185, mid=21.1279, max=21.6870, count=512
+Stage 1 execution times:
+		mean=18.9947 ms, std=0.1963, mid=19.0040, max=19.3524, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7233 ms, std=0.0315, mid=0.7250, max=0.7470, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0004, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1201 ms, std=0.0016, mid=0.1199, max=0.1287, count=512
+		mean=0.0915 GB/s, std=0.0012, mid=0.0916, max=0.0948, count=512
+Req 23 size: 50724864 number of tokens: 516 (shape: torch.Size([2, 8, 516, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.1196 ms, std=0.2226, mid=21.1122, max=21.7304, count=512
+Stage 1 execution times:
+		mean=18.9987 ms, std=0.1937, mid=19.0097, max=19.3431, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7225 ms, std=0.0315, mid=0.7248, max=0.7632, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0004, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1199 ms, std=0.0015, mid=0.1197, max=0.1266, count=512
+		mean=0.0916 GB/s, std=0.0011, mid=0.0918, max=0.0942, count=512
+Req 22 size: 51019776 number of tokens: 519 (shape: torch.Size([2, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.2861 ms, std=3.7554, mid=21.1203, max=106.0278, count=512
+Stage 1 execution times:
+		mean=19.0049 ms, std=0.1931, mid=19.0195, max=19.3534, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7224 ms, std=0.0314, mid=0.7250, max=0.7455, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0004, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1204 ms, std=0.0024, mid=0.1199, max=0.1526, count=512
+		mean=0.0912 GB/s, std=0.0016, mid=0.0916, max=0.0942, count=512
+Req 21 size: 51019776 number of tokens: 519 (shape: torch.Size([2, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.1229 ms, std=0.2161, mid=21.1326, max=21.6453, count=512
+Stage 1 execution times:
+		mean=19.0027 ms, std=0.1972, mid=19.0146, max=19.3491, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7227 ms, std=0.0315, mid=0.7250, max=0.7446, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0004, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1206 ms, std=0.0016, mid=0.1204, max=0.1285, count=512
+		mean=0.0911 GB/s, std=0.0012, mid=0.0912, max=0.0937, count=512
+Req 20 size: 50724864 number of tokens: 516 (shape: torch.Size([2, 8, 516, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.1336 ms, std=0.2248, mid=21.1387, max=21.7817, count=512
+Stage 1 execution times:
+		mean=19.0087 ms, std=0.1920, mid=19.0254, max=19.3577, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7222 ms, std=0.0316, mid=0.7250, max=0.7451, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0005, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1205 ms, std=0.0017, mid=0.1202, max=0.1307, count=512
+		mean=0.0912 GB/s, std=0.0012, mid=0.0914, max=0.0940, count=512
+Req 19 size: 51019776 number of tokens: 519 (shape: torch.Size([2, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.1367 ms, std=0.2229, mid=21.1432, max=21.7502, count=512
+Stage 1 execution times:
+		mean=19.0081 ms, std=0.1934, mid=19.0187, max=19.3644, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7229 ms, std=0.0314, mid=0.7250, max=0.7520, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0004, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1201 ms, std=0.0015, mid=0.1197, max=0.1278, count=512
+		mean=0.0915 GB/s, std=0.0012, mid=0.0918, max=0.0944, count=512
+Req 18 size: 51019776 number of tokens: 519 (shape: torch.Size([2, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.1405 ms, std=0.2193, mid=21.1458, max=21.6999, count=512
+Stage 1 execution times:
+		mean=19.0053 ms, std=0.1948, mid=19.0188, max=19.3474, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7230 ms, std=0.0318, mid=0.7253, max=0.7443, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0004, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1203 ms, std=0.0017, mid=0.1199, max=0.1333, count=512
+		mean=0.0913 GB/s, std=0.0013, mid=0.0916, max=0.0940, count=512
+Req 17 size: 50724864 number of tokens: 516 (shape: torch.Size([2, 8, 516, 64]))
+Time to process 16 requests: 168.63 seconds
+------------------------------
+python ./main.py --batch 3 --num-requests 24 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 24 requests
+Batch size is: 3
+Req 32 size: 76615872
+Req 31 size: 76542144
+Req 30 size: 76615872
+Req 29 size: 76542144
+Req 28 size: 76615872
+Req 27 size: 76542144
+Req 26 size: 76615872
+Req 25 size: 76542144
+Time to process 24 requests: 100.32 seconds
+------------------------------
+python ./main.py --batch 3 --num-requests 24 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 24 requests
+Batch size is: 3
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.6315 ms, std=5.0965, mid=21.4038, max=136.4820, count=512
+Stage 1 execution times:
+		mean=19.2207 ms, std=0.2642, mid=19.2384, max=21.4388, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7417 ms, std=0.2679, mid=0.7281, max=6.7558, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0005, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1234 ms, std=0.0022, mid=0.1233, max=0.1521, count=512
+		mean=0.1336 GB/s, std=0.0022, mid=0.1337, max=0.1380, count=512
+Req 32 size: 76529664 number of tokens: 519 (shape: torch.Size([3, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.3837 ms, std=0.2812, mid=21.3966, max=22.1014, count=512
+Stage 1 execution times:
+		mean=19.2123 ms, std=0.2510, mid=19.2358, max=19.6753, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7271 ms, std=0.0316, mid=0.7274, max=0.7536, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0006, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1230 ms, std=0.0017, mid=0.1228, max=0.1309, count=512
+		mean=0.1340 GB/s, std=0.0018, mid=0.1342, max=0.1382, count=512
+Req 31 size: 76529664 number of tokens: 519 (shape: torch.Size([3, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.3859 ms, std=0.2805, mid=21.3970, max=22.1534, count=512
+Stage 1 execution times:
+		mean=19.2132 ms, std=0.2502, mid=19.2509, max=19.6960, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7272 ms, std=0.0314, mid=0.7272, max=0.7546, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0007, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1226 ms, std=0.0017, mid=0.1223, max=0.1304, count=512
+		mean=0.1344 GB/s, std=0.0019, mid=0.1347, max=0.1385, count=512
+Req 30 size: 76529664 number of tokens: 519 (shape: torch.Size([3, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.5495 ms, std=3.7599, mid=21.3814, max=106.3147, count=512
+Stage 1 execution times:
+		mean=19.2159 ms, std=0.2513, mid=19.2559, max=19.6955, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7266 ms, std=0.0317, mid=0.7272, max=0.7546, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0007, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1227 ms, std=0.0022, mid=0.1223, max=0.1557, count=512
+		mean=0.1344 GB/s, std=0.0022, mid=0.1347, max=0.1388, count=512
+Req 29 size: 76529664 number of tokens: 519 (shape: torch.Size([3, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.3904 ms, std=0.2773, mid=21.3951, max=22.0883, count=512
+Stage 1 execution times:
+		mean=19.2142 ms, std=0.2504, mid=19.2434, max=19.6898, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7268 ms, std=0.0319, mid=0.7272, max=0.7541, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0006, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1226 ms, std=0.0017, mid=0.1225, max=0.1311, count=512
+		mean=0.1345 GB/s, std=0.0018, mid=0.1345, max=0.1385, count=512
+Req 28 size: 76529664 number of tokens: 519 (shape: torch.Size([3, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.3986 ms, std=0.2791, mid=21.4068, max=22.1519, count=512
+Stage 1 execution times:
+		mean=19.2151 ms, std=0.2502, mid=19.2502, max=19.6917, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7269 ms, std=0.0315, mid=0.7272, max=0.7539, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0007, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1227 ms, std=0.0018, mid=0.1223, max=0.1307, count=512
+		mean=0.1344 GB/s, std=0.0019, mid=0.1347, max=0.1382, count=512
+Req 27 size: 76529664 number of tokens: 519 (shape: torch.Size([3, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.3999 ms, std=0.2776, mid=21.4057, max=22.1243, count=512
+Stage 1 execution times:
+		mean=19.2169 ms, std=0.2513, mid=19.2480, max=19.6927, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7263 ms, std=0.0314, mid=0.7272, max=0.7472, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0007, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1228 ms, std=0.0017, mid=0.1225, max=0.1304, count=512
+		mean=0.1342 GB/s, std=0.0018, mid=0.1345, max=0.1391, count=512
+Req 26 size: 76529664 number of tokens: 519 (shape: torch.Size([3, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.4045 ms, std=0.2773, mid=21.4100, max=22.1157, count=512
+Stage 1 execution times:
+		mean=19.2182 ms, std=0.2526, mid=19.2358, max=19.7084, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7268 ms, std=0.0315, mid=0.7272, max=0.7539, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0007, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1229 ms, std=0.0018, mid=0.1225, max=0.1314, count=512
+		mean=0.1341 GB/s, std=0.0019, mid=0.1345, max=0.1380, count=512
+Req 25 size: 76529664 number of tokens: 519 (shape: torch.Size([3, 8, 519, 64]))
+Time to process 24 requests: 170.73 seconds
+------------------------------
+python ./main.py --batch 4 --num-requests 32 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 32 requests
+Batch size is: 4
+Req 40 size: 102154496
+Req 39 size: 102056192
+Req 38 size: 102154496
+Req 37 size: 102056192
+Req 36 size: 102154496
+Req 35 size: 102056192
+Req 34 size: 102154496
+Req 33 size: 102056192
+Time to process 32 requests: 100.82 seconds
+------------------------------
+python ./main.py --batch 4 --num-requests 32 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 32 requests
+Batch size is: 4
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.8920 ms, std=5.6106, mid=21.6122, max=148.1581, count=512
+Stage 1 execution times:
+		mean=19.4619 ms, std=0.3534, mid=19.4572, max=21.6722, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7446 ms, std=0.2654, mid=0.7355, max=6.7027, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0008, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1241 ms, std=0.0026, mid=0.1237, max=0.1550, count=512
+		mean=0.1771 GB/s, std=0.0034, mid=0.1776, max=0.1836, count=512
+Req 40 size: 102039552 number of tokens: 519 (shape: torch.Size([4, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.6103 ms, std=0.3521, mid=21.6006, max=22.3966, count=512
+Stage 1 execution times:
+		mean=19.4450 ms, std=0.3335, mid=19.4399, max=20.1256, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7298 ms, std=0.0319, mid=0.7286, max=0.7541, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0009, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1234 ms, std=0.0018, mid=0.1233, max=0.1314, count=512
+		mean=0.1780 GB/s, std=0.0026, mid=0.1783, max=0.1843, count=512
+Req 39 size: 102039552 number of tokens: 519 (shape: torch.Size([4, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.6179 ms, std=0.3488, mid=21.6084, max=22.4738, count=512
+Stage 1 execution times:
+		mean=19.4468 ms, std=0.3319, mid=19.4376, max=20.0994, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7302 ms, std=0.0314, mid=0.7288, max=0.7544, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0009, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1233 ms, std=0.0020, mid=0.1230, max=0.1383, count=512
+		mean=0.1782 GB/s, std=0.0028, mid=0.1786, max=0.1851, count=512
+Req 38 size: 102039552 number of tokens: 519 (shape: torch.Size([4, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.7720 ms, std=3.6901, mid=21.6002, max=104.8074, count=512
+Stage 1 execution times:
+		mean=19.4486 ms, std=0.3348, mid=19.4345, max=20.0760, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7300 ms, std=0.0315, mid=0.7281, max=0.7586, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0009, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1236 ms, std=0.0025, mid=0.1233, max=0.1497, count=512
+		mean=0.1778 GB/s, std=0.0034, mid=0.1783, max=0.1851, count=512
+Req 37 size: 102039552 number of tokens: 519 (shape: torch.Size([4, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.6192 ms, std=0.3529, mid=21.6056, max=22.4445, count=512
+Stage 1 execution times:
+		mean=19.4504 ms, std=0.3324, mid=19.4434, max=20.1304, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7293 ms, std=0.0322, mid=0.7281, max=0.7546, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0009, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1235 ms, std=0.0021, mid=0.1233, max=0.1440, count=512
+		mean=0.1779 GB/s, std=0.0028, mid=0.1783, max=0.1825, count=512
+Req 36 size: 102039552 number of tokens: 519 (shape: torch.Size([4, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.6279 ms, std=0.3481, mid=21.6247, max=22.5120, count=512
+Stage 1 execution times:
+		mean=19.4529 ms, std=0.3320, mid=19.4513, max=20.1128, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7299 ms, std=0.0318, mid=0.7286, max=0.7546, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0009, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1234 ms, std=0.0018, mid=0.1233, max=0.1295, count=512
+		mean=0.1781 GB/s, std=0.0025, mid=0.1783, max=0.1862, count=512
+Req 35 size: 102039552 number of tokens: 519 (shape: torch.Size([4, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.6349 ms, std=0.3556, mid=21.6277, max=22.4950, count=512
+Stage 1 execution times:
+		mean=19.4525 ms, std=0.3303, mid=19.4432, max=20.0853, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7303 ms, std=0.0319, mid=0.7319, max=0.7563, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0009, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1236 ms, std=0.0019, mid=0.1233, max=0.1369, count=512
+		mean=0.1778 GB/s, std=0.0027, mid=0.1783, max=0.1847, count=512
+Req 34 size: 102039552 number of tokens: 519 (shape: torch.Size([4, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.6382 ms, std=0.3534, mid=21.6341, max=22.4805, count=512
+Stage 1 execution times:
+		mean=19.4525 ms, std=0.3320, mid=19.4465, max=20.0896, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7305 ms, std=0.0316, mid=0.7350, max=0.7546, count=512
+		mean=0.0000 GB/s, std=0.0000, mid=0.0000, max=0.0009, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1239 ms, std=0.0022, mid=0.1235, max=0.1378, count=512
+		mean=0.1774 GB/s, std=0.0030, mid=0.1779, max=0.1843, count=512
+Req 33 size: 102039552 number of tokens: 519 (shape: torch.Size([4, 8, 519, 64]))
+Time to process 32 requests: 172.68 seconds
+------------------------------
+python ./main.py --batch 5 --num-requests 40 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 40 requests
+Batch size is: 5
+Req 48 size: 127693120
+Req 47 size: 127570240
+Req 46 size: 127693120
+Req 45 size: 127570240
+Req 44 size: 127693120
+Req 43 size: 127570240
+Req 42 size: 127693120
+Req 41 size: 127570240
+Time to process 40 requests: 100.91 seconds
+------------------------------
+python ./main.py --batch 5 --num-requests 40 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 40 requests
+Batch size is: 5
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.0871 ms, std=5.2813, mid=21.7935, max=140.7037, count=512
+Stage 1 execution times:
+		mean=19.6570 ms, std=0.4058, mid=19.6166, max=20.8464, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7504 ms, std=0.2633, mid=0.7368, max=6.6590, count=512
+		mean=0.0001 GB/s, std=0.0000, mid=0.0001, max=0.0010, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1228 ms, std=0.0026, mid=0.1225, max=0.1528, count=512
+		mean=0.2238 GB/s, std=0.0045, mid=0.2241, max=0.2323, count=512
+Req 48 size: 127549440 number of tokens: 519 (shape: torch.Size([5, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.8187 ms, std=0.4188, mid=21.7922, max=22.7654, count=512
+Stage 1 execution times:
+		mean=19.6473 ms, std=0.4009, mid=19.6086, max=20.4270, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7358 ms, std=0.0320, mid=0.7360, max=0.7632, count=512
+		mean=0.0001 GB/s, std=0.0000, mid=0.0001, max=0.0011, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1225 ms, std=0.0020, mid=0.1223, max=0.1376, count=512
+		mean=0.2243 GB/s, std=0.0035, mid=0.2246, max=0.2313, count=512
+Req 47 size: 127549440 number of tokens: 519 (shape: torch.Size([5, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.8328 ms, std=0.4195, mid=21.8204, max=22.8186, count=512
+Stage 1 execution times:
+		mean=19.6498 ms, std=0.4011, mid=19.6128, max=20.3867, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7352 ms, std=0.0319, mid=0.7358, max=0.7629, count=512
+		mean=0.0001 GB/s, std=0.0000, mid=0.0001, max=0.0011, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1223 ms, std=0.0021, mid=0.1218, max=0.1333, count=512
+		mean=0.2247 GB/s, std=0.0038, mid=0.2254, max=0.2323, count=512
+Req 46 size: 127549440 number of tokens: 519 (shape: torch.Size([5, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.9869 ms, std=3.7601, mid=21.8121, max=106.4563, count=512
+Stage 1 execution times:
+		mean=19.6530 ms, std=0.4013, mid=19.6157, max=20.3927, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7356 ms, std=0.0317, mid=0.7358, max=0.7629, count=512
+		mean=0.0001 GB/s, std=0.0000, mid=0.0001, max=0.0011, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1222 ms, std=0.0027, mid=0.1217, max=0.1538, count=512
+		mean=0.2249 GB/s, std=0.0045, mid=0.2257, max=0.2327, count=512
+Req 45 size: 127549440 number of tokens: 519 (shape: torch.Size([5, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.8296 ms, std=0.4231, mid=21.8164, max=22.7740, count=512
+Stage 1 execution times:
+		mean=19.6524 ms, std=0.4007, mid=19.6159, max=20.3741, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7348 ms, std=0.0323, mid=0.7355, max=0.7620, count=512
+		mean=0.0001 GB/s, std=0.0000, mid=0.0001, max=0.0011, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1219 ms, std=0.0021, mid=0.1216, max=0.1342, count=512
+		mean=0.2254 GB/s, std=0.0037, mid=0.2259, max=0.2346, count=512
+Req 44 size: 127549440 number of tokens: 519 (shape: torch.Size([5, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.8402 ms, std=0.4229, mid=21.8260, max=22.8667, count=512
+Stage 1 execution times:
+		mean=19.6567 ms, std=0.4032, mid=19.6259, max=20.4167, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7352 ms, std=0.0323, mid=0.7358, max=0.7627, count=512
+		mean=0.0001 GB/s, std=0.0000, mid=0.0001, max=0.0011, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1220 ms, std=0.0021, mid=0.1216, max=0.1323, count=512
+		mean=0.2251 GB/s, std=0.0037, mid=0.2259, max=0.2332, count=512
+Req 43 size: 127549440 number of tokens: 519 (shape: torch.Size([5, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.8413 ms, std=0.4187, mid=21.8372, max=22.8114, count=512
+Stage 1 execution times:
+		mean=19.6575 ms, std=0.3992, mid=19.6172, max=20.3905, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7358 ms, std=0.0318, mid=0.7358, max=0.7627, count=512
+		mean=0.0001 GB/s, std=0.0000, mid=0.0001, max=0.0011, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1219 ms, std=0.0023, mid=0.1216, max=0.1400, count=512
+		mean=0.2255 GB/s, std=0.0041, mid=0.2259, max=0.2323, count=512
+Req 42 size: 127549440 number of tokens: 519 (shape: torch.Size([5, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=21.8454 ms, std=0.4191, mid=21.8294, max=22.8055, count=512
+Stage 1 execution times:
+		mean=19.6585 ms, std=0.4016, mid=19.6297, max=20.3948, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7358 ms, std=0.0321, mid=0.7358, max=0.7625, count=512
+		mean=0.0001 GB/s, std=0.0000, mid=0.0001, max=0.0011, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1222 ms, std=0.0021, mid=0.1218, max=0.1338, count=512
+		mean=0.2249 GB/s, std=0.0037, mid=0.2254, max=0.2323, count=512
+Req 41 size: 127549440 number of tokens: 519 (shape: torch.Size([5, 8, 519, 64]))
+Time to process 40 requests: 174.38 seconds
+------------------------------
+python ./main.py --batch 6 --num-requests 48 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 48 requests
+Batch size is: 6
+Req 56 size: 153231744
+Req 55 size: 153084288
+Req 54 size: 153231744
+Req 53 size: 153084288
+Req 52 size: 153231744
+Req 51 size: 153084288
+Req 50 size: 153231744
+Req 49 size: 153084288
+Time to process 48 requests: 100.61 seconds
+------------------------------
+python ./main.py --batch 6 --num-requests 48 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 48 requests
+Batch size is: 6
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.2700 ms, std=5.1331, mid=21.9966, max=137.3594, count=512
+Stage 1 execution times:
+		mean=19.8284 ms, std=0.4864, mid=19.8220, max=20.9174, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7562 ms, std=0.2667, mid=0.7453, max=6.7425, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0012, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1242 ms, std=0.0026, mid=0.1237, max=0.1497, count=512
+		mean=0.2655 GB/s, std=0.0053, mid=0.2664, max=0.2776, count=512
+Req 56 size: 153059328 number of tokens: 519 (shape: torch.Size([6, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.0048 ms, std=0.5021, mid=21.9787, max=23.0589, count=512
+Stage 1 execution times:
+		mean=19.8131 ms, std=0.4827, mid=19.8082, max=20.6685, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7416 ms, std=0.0321, mid=0.7448, max=0.7720, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0013, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1236 ms, std=0.0018, mid=0.1235, max=0.1342, count=512
+		mean=0.2666 GB/s, std=0.0039, mid=0.2669, max=0.2748, count=512
+Req 55 size: 153059328 number of tokens: 519 (shape: torch.Size([6, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.0136 ms, std=0.5017, mid=21.9921, max=23.1309, count=512
+Stage 1 execution times:
+		mean=19.8164 ms, std=0.4831, mid=19.8150, max=20.6835, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7423 ms, std=0.0322, mid=0.7448, max=0.7722, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0013, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1237 ms, std=0.0019, mid=0.1235, max=0.1378, count=512
+		mean=0.2666 GB/s, std=0.0040, mid=0.2669, max=0.2765, count=512
+Req 54 size: 153059328 number of tokens: 519 (shape: torch.Size([6, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.1679 ms, std=3.7281, mid=21.9758, max=105.6871, count=512
+Stage 1 execution times:
+		mean=19.8146 ms, std=0.4831, mid=19.8016, max=20.6788, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7415 ms, std=0.0322, mid=0.7448, max=0.7765, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0013, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1238 ms, std=0.0024, mid=0.1235, max=0.1521, count=512
+		mean=0.2662 GB/s, std=0.0048, mid=0.2669, max=0.2748, count=512
+Req 53 size: 153059328 number of tokens: 519 (shape: torch.Size([6, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.0137 ms, std=0.5033, mid=21.9808, max=23.0894, count=512
+Stage 1 execution times:
+		mean=19.8144 ms, std=0.4850, mid=19.8022, max=20.6881, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7421 ms, std=0.0320, mid=0.7448, max=0.7722, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0013, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1237 ms, std=0.0020, mid=0.1233, max=0.1357, count=512
+		mean=0.2665 GB/s, std=0.0042, mid=0.2674, max=0.2748, count=512
+Req 52 size: 153059328 number of tokens: 519 (shape: torch.Size([6, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.0191 ms, std=0.5023, mid=21.9877, max=23.1702, count=512
+Stage 1 execution times:
+		mean=19.8161 ms, std=0.4815, mid=19.8002, max=20.6769, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7423 ms, std=0.0321, mid=0.7448, max=0.7637, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0013, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1237 ms, std=0.0019, mid=0.1235, max=0.1335, count=512
+		mean=0.2666 GB/s, std=0.0040, mid=0.2669, max=0.2754, count=512
+Req 51 size: 153059328 number of tokens: 519 (shape: torch.Size([6, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.0216 ms, std=0.5003, mid=21.9860, max=23.1266, count=512
+Stage 1 execution times:
+		mean=19.8182 ms, std=0.4859, mid=19.8073, max=20.6912, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7416 ms, std=0.0321, mid=0.7448, max=0.7646, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0013, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1236 ms, std=0.0020, mid=0.1235, max=0.1397, count=512
+		mean=0.2666 GB/s, std=0.0042, mid=0.2669, max=0.2770, count=512
+Req 50 size: 153059328 number of tokens: 519 (shape: torch.Size([6, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.0278 ms, std=0.5007, mid=22.0118, max=23.0932, count=512
+Stage 1 execution times:
+		mean=19.8197 ms, std=0.4830, mid=19.8104, max=20.6685, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7427 ms, std=0.0324, mid=0.7448, max=0.7639, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0013, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1237 ms, std=0.0020, mid=0.1235, max=0.1364, count=512
+		mean=0.2665 GB/s, std=0.0042, mid=0.2669, max=0.2748, count=512
+Req 49 size: 153059328 number of tokens: 519 (shape: torch.Size([6, 8, 519, 64]))
+Time to process 48 requests: 175.83 seconds
+------------------------------
+python ./main.py --batch 7 --num-requests 56 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 56 requests
+Batch size is: 7
+Req 64 size: 178770368
+Req 63 size: 178598336
+Req 62 size: 178770368
+Req 61 size: 178598336
+Req 60 size: 178770368
+Req 59 size: 178598336
+Req 58 size: 178770368
+Req 57 size: 178598336
+Time to process 56 requests: 101.36 seconds
+------------------------------
+python ./main.py --batch 7 --num-requests 56 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 56 requests
+Batch size is: 7
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.4991 ms, std=6.1189, mid=22.2042, max=159.8632, count=512
+Stage 1 execution times:
+		mean=20.0835 ms, std=0.5583, mid=20.0938, max=21.2796, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7593 ms, std=0.2716, mid=0.7463, max=6.8555, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0014, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1237 ms, std=0.0020, mid=0.1233, max=0.1473, count=512
+		mean=0.3110 GB/s, std=0.0048, mid=0.3120, max=0.3187, count=512
+Req 64 size: 178569216 number of tokens: 519 (shape: torch.Size([7, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.1888 ms, std=0.5740, mid=22.1890, max=23.3636, count=512
+Stage 1 execution times:
+		mean=20.0751 ms, std=0.5576, mid=20.0865, max=21.0519, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7449 ms, std=0.0321, mid=0.7458, max=0.7725, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0015, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1236 ms, std=0.0016, mid=0.1233, max=0.1302, count=512
+		mean=0.3111 GB/s, std=0.0039, mid=0.3120, max=0.3194, count=512
+Req 63 size: 178569216 number of tokens: 519 (shape: torch.Size([7, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.1960 ms, std=0.5728, mid=22.1903, max=23.4191, count=512
+Stage 1 execution times:
+		mean=20.0725 ms, std=0.5602, mid=20.0676, max=21.0836, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7447 ms, std=0.0320, mid=0.7458, max=0.7646, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0015, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1234 ms, std=0.0015, mid=0.1233, max=0.1290, count=512
+		mean=0.3116 GB/s, std=0.0038, mid=0.3120, max=0.3232, count=512
+Req 62 size: 178569216 number of tokens: 519 (shape: torch.Size([7, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.3579 ms, std=3.7696, mid=22.1949, max=106.5865, count=512
+Stage 1 execution times:
+		mean=20.0799 ms, std=0.5607, mid=20.0843, max=21.0478, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7444 ms, std=0.0321, mid=0.7457, max=0.7663, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0015, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1238 ms, std=0.0021, mid=0.1235, max=0.1528, count=512
+		mean=0.3108 GB/s, std=0.0048, mid=0.3114, max=0.3194, count=512
+Req 61 size: 178569216 number of tokens: 519 (shape: torch.Size([7, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.2009 ms, std=0.5716, mid=22.2027, max=23.3521, count=512
+Stage 1 execution times:
+		mean=20.0822 ms, std=0.5600, mid=20.0896, max=21.0586, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7443 ms, std=0.0323, mid=0.7458, max=0.7644, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0015, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1238 ms, std=0.0016, mid=0.1235, max=0.1297, count=512
+		mean=0.3106 GB/s, std=0.0040, mid=0.3114, max=0.3219, count=512
+Req 60 size: 178569216 number of tokens: 519 (shape: torch.Size([7, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.2067 ms, std=0.5707, mid=22.2083, max=23.4640, count=512
+Stage 1 execution times:
+		mean=20.0816 ms, std=0.5593, mid=20.0832, max=21.0762, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7441 ms, std=0.0320, mid=0.7455, max=0.7720, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0015, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1240 ms, std=0.0018, mid=0.1235, max=0.1309, count=512
+		mean=0.3102 GB/s, std=0.0046, mid=0.3114, max=0.3213, count=512
+Req 59 size: 178569216 number of tokens: 519 (shape: torch.Size([7, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.2128 ms, std=0.5726, mid=22.2125, max=23.4399, count=512
+Stage 1 execution times:
+		mean=20.0839 ms, std=0.5590, mid=20.1000, max=21.0564, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7447 ms, std=0.0319, mid=0.7458, max=0.7641, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0015, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1236 ms, std=0.0016, mid=0.1235, max=0.1292, count=512
+		mean=0.3110 GB/s, std=0.0039, mid=0.3114, max=0.3200, count=512
+Req 58 size: 178569216 number of tokens: 519 (shape: torch.Size([7, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.2194 ms, std=0.5702, mid=22.2337, max=23.4094, count=512
+Stage 1 execution times:
+		mean=20.0848 ms, std=0.5604, mid=20.0902, max=21.0974, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7441 ms, std=0.0323, mid=0.7458, max=0.7646, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0015, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1237 ms, std=0.0016, mid=0.1235, max=0.1318, count=512
+		mean=0.3109 GB/s, std=0.0041, mid=0.3114, max=0.3181, count=512
+Req 57 size: 178569216 number of tokens: 519 (shape: torch.Size([7, 8, 519, 64]))
+Time to process 56 requests: 177.71 seconds
+------------------------------
+python ./main.py --batch 8 --num-requests 64 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 64 requests
+Batch size is: 8
+Req 72 size: 204308992
+Req 71 size: 204112384
+Req 70 size: 204308992
+Req 69 size: 204112384
+Req 68 size: 204308992
+Req 67 size: 204112384
+Req 66 size: 204308992
+Req 65 size: 204112384
+Time to process 64 requests: 100.96 seconds
+------------------------------
+python ./main.py --batch 8 --num-requests 64 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 64 requests
+Batch size is: 8
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.8329 ms, std=5.9607, mid=22.5599, max=156.4736, count=512
+Stage 1 execution times:
+		mean=20.3498 ms, std=0.6310, mid=20.3639, max=21.7416, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7618 ms, std=0.2821, mid=0.7477, max=7.0975, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0016, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1253 ms, std=0.0023, mid=0.1249, max=0.1519, count=512
+		mean=0.3507 GB/s, std=0.0060, mid=0.3518, max=0.3607, count=512
+Req 72 size: 204079104 number of tokens: 519 (shape: torch.Size([8, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.5287 ms, std=0.6495, mid=22.5495, max=23.9484, count=512
+Stage 1 execution times:
+		mean=20.3355 ms, std=0.6331, mid=20.3506, max=21.4710, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7465 ms, std=0.0321, mid=0.7470, max=0.7703, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0017, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1249 ms, std=0.0017, mid=0.1247, max=0.1333, count=512
+		mean=0.3520 GB/s, std=0.0047, mid=0.3524, max=0.3607, count=512
+Req 71 size: 204079104 number of tokens: 519 (shape: torch.Size([8, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.5358 ms, std=0.6513, mid=22.5519, max=23.9336, count=512
+Stage 1 execution times:
+		mean=20.3403 ms, std=0.6321, mid=20.3646, max=21.4610, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7465 ms, std=0.0321, mid=0.7467, max=0.7730, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0017, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1249 ms, std=0.0115, mid=0.1242, max=0.3808, count=512
+		mean=0.3528 GB/s, std=0.0116, mid=0.3538, max=0.3657, count=512
+Req 70 size: 204079104 number of tokens: 519 (shape: torch.Size([8, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.6921 ms, std=3.7748, mid=22.5375, max=106.7293, count=512
+Stage 1 execution times:
+		mean=20.3375 ms, std=0.6305, mid=20.3598, max=21.4572, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7465 ms, std=0.0324, mid=0.7467, max=0.7744, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0017, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1241 ms, std=0.0022, mid=0.1237, max=0.1516, count=512
+		mean=0.3542 GB/s, std=0.0059, mid=0.3551, max=0.3650, count=512
+Req 69 size: 204079104 number of tokens: 519 (shape: torch.Size([8, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.5331 ms, std=0.6487, mid=22.5570, max=23.8297, count=512
+Stage 1 execution times:
+		mean=20.3391 ms, std=0.6321, mid=20.3512, max=21.4417, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7468 ms, std=0.0321, mid=0.7470, max=0.7689, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0017, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1248 ms, std=0.0017, mid=0.1245, max=0.1340, count=512
+		mean=0.3522 GB/s, std=0.0048, mid=0.3531, max=0.3614, count=512
+Req 68 size: 204079104 number of tokens: 519 (shape: torch.Size([8, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.5420 ms, std=0.6524, mid=22.5619, max=23.9100, count=512
+Stage 1 execution times:
+		mean=20.3395 ms, std=0.6310, mid=20.3685, max=21.4493, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7467 ms, std=0.0325, mid=0.7470, max=0.7737, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0017, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1248 ms, std=0.0017, mid=0.1245, max=0.1333, count=512
+		mean=0.3521 GB/s, std=0.0047, mid=0.3531, max=0.3607, count=512
+Req 67 size: 204079104 number of tokens: 519 (shape: torch.Size([8, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.5435 ms, std=0.6488, mid=22.5556, max=23.8700, count=512
+Stage 1 execution times:
+		mean=20.3400 ms, std=0.6314, mid=20.3638, max=21.4672, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7469 ms, std=0.0323, mid=0.7472, max=0.7761, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0017, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1248 ms, std=0.0018, mid=0.1245, max=0.1314, count=512
+		mean=0.3522 GB/s, std=0.0050, mid=0.3531, max=0.3628, count=512
+Req 66 size: 204079104 number of tokens: 519 (shape: torch.Size([8, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.5466 ms, std=0.6489, mid=22.5655, max=23.9041, count=512
+Stage 1 execution times:
+		mean=20.3395 ms, std=0.6315, mid=20.3639, max=21.4665, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7470 ms, std=0.0323, mid=0.7470, max=0.7691, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0017, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1249 ms, std=0.0017, mid=0.1245, max=0.1347, count=512
+		mean=0.3520 GB/s, std=0.0047, mid=0.3531, max=0.3614, count=512
+Req 65 size: 204079104 number of tokens: 519 (shape: torch.Size([8, 8, 519, 64]))
+Time to process 64 requests: 180.17 seconds
+------------------------------
+python ./main.py --batch 9 --num-requests 72 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 72 requests
+Batch size is: 9
+Req 80 size: 229847616
+Req 79 size: 229626432
+Req 78 size: 229847616
+Req 77 size: 229626432
+Req 76 size: 229847616
+Req 75 size: 229626432
+Req 74 size: 229847616
+Req 73 size: 229626432
+Time to process 72 requests: 101.83 seconds
+------------------------------
+python ./main.py --batch 9 --num-requests 72 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 72 requests
+Batch size is: 9
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.8911 ms, std=5.1858, mid=22.6619, max=138.5043, count=512
+Stage 1 execution times:
+		mean=20.4388 ms, std=0.7019, mid=20.4678, max=21.9748, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7676 ms, std=0.2835, mid=0.7551, max=7.1340, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0018, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1246 ms, std=0.0027, mid=0.1240, max=0.1566, count=512
+		mean=0.3970 GB/s, std=0.0081, mid=0.3988, max=0.4114, count=512
+Req 80 size: 229588992 number of tokens: 519 (shape: torch.Size([9, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.6182 ms, std=0.7177, mid=22.6239, max=24.1494, count=512
+Stage 1 execution times:
+		mean=20.4237 ms, std=0.7031, mid=20.4587, max=21.6608, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7516 ms, std=0.0325, mid=0.7546, max=0.7739, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0020, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1237 ms, std=0.0017, mid=0.1235, max=0.1292, count=512
+		mean=0.3997 GB/s, std=0.0053, mid=0.4003, max=0.4122, count=512
+Req 79 size: 229588992 number of tokens: 519 (shape: torch.Size([9, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.6251 ms, std=0.7105, mid=22.6413, max=24.1158, count=512
+Stage 1 execution times:
+		mean=20.4252 ms, std=0.7030, mid=20.4502, max=21.6649, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7525 ms, std=0.0324, mid=0.7546, max=0.7734, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0019, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1240 ms, std=0.0019, mid=0.1237, max=0.1354, count=512
+		mean=0.3988 GB/s, std=0.0060, mid=0.3995, max=0.4106, count=512
+Req 78 size: 229588992 number of tokens: 519 (shape: torch.Size([9, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.7825 ms, std=3.7915, mid=22.6432, max=106.9613, count=512
+Stage 1 execution times:
+		mean=20.4251 ms, std=0.7023, mid=20.4452, max=21.6577, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7522 ms, std=0.0324, mid=0.7546, max=0.7734, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0020, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1241 ms, std=0.0024, mid=0.1237, max=0.1574, count=512
+		mean=0.3984 GB/s, std=0.0070, mid=0.3995, max=0.4122, count=512
+Req 77 size: 229588992 number of tokens: 519 (shape: torch.Size([9, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.6261 ms, std=0.7186, mid=22.6432, max=24.0357, count=512
+Stage 1 execution times:
+		mean=20.4276 ms, std=0.7041, mid=20.4617, max=21.6508, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7524 ms, std=0.0326, mid=0.7546, max=0.7734, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0020, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1241 ms, std=0.0018, mid=0.1237, max=0.1340, count=512
+		mean=0.3986 GB/s, std=0.0057, mid=0.3995, max=0.4122, count=512
+Req 76 size: 229588992 number of tokens: 519 (shape: torch.Size([9, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.6342 ms, std=0.7091, mid=22.6468, max=24.1148, count=512
+Stage 1 execution times:
+		mean=20.4251 ms, std=0.7013, mid=20.4431, max=21.6415, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7523 ms, std=0.0324, mid=0.7548, max=0.7815, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0019, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1244 ms, std=0.0020, mid=0.1240, max=0.1361, count=512
+		mean=0.3976 GB/s, std=0.0063, mid=0.3988, max=0.4156, count=512
+Req 75 size: 229588992 number of tokens: 519 (shape: torch.Size([9, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.6309 ms, std=0.7134, mid=22.6563, max=24.1039, count=512
+Stage 1 execution times:
+		mean=20.4238 ms, std=0.7029, mid=20.4573, max=21.6558, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7528 ms, std=0.0326, mid=0.7548, max=0.7737, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0020, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1240 ms, std=0.0018, mid=0.1237, max=0.1390, count=512
+		mean=0.3986 GB/s, std=0.0056, mid=0.3995, max=0.4114, count=512
+Req 74 size: 229588992 number of tokens: 519 (shape: torch.Size([9, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.6384 ms, std=0.7114, mid=22.6638, max=24.0202, count=512
+Stage 1 execution times:
+		mean=20.4286 ms, std=0.7015, mid=20.4605, max=21.6570, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7528 ms, std=0.0324, mid=0.7548, max=0.7737, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0019, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1241 ms, std=0.0018, mid=0.1237, max=0.1340, count=512
+		mean=0.3983 GB/s, std=0.0057, mid=0.3995, max=0.4098, count=512
+Req 73 size: 229588992 number of tokens: 519 (shape: torch.Size([9, 8, 519, 64]))
+Time to process 72 requests: 180.88 seconds
+------------------------------
+python ./main.py --batch 10 --num-requests 80 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 80 requests
+Batch size is: 10
+Req 88 size: 255386240
+Req 87 size: 255140480
+Req 86 size: 255386240
+Req 85 size: 255140480
+Req 84 size: 255386240
+Req 83 size: 255140480
+Req 82 size: 255386240
+Req 81 size: 255140480
+Time to process 80 requests: 102.30 seconds
+------------------------------
+python ./main.py --batch 10 --num-requests 80 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 80 requests
+Batch size is: 10
+Execution Statistics:
+Stage 0 execution times:
+		mean=23.3941 ms, std=9.2718, mid=22.9787, max=232.0774, count=512
+Stage 1 execution times:
+		mean=20.6888 ms, std=0.7770, mid=20.7098, max=22.4197, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7693 ms, std=0.2827, mid=0.7560, max=7.1168, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0020, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1257 ms, std=0.0023, mid=0.1252, max=0.1533, count=512
+		mean=0.4372 GB/s, std=0.0076, mid=0.4389, max=0.4500, count=512
+Req 88 size: 255098880 number of tokens: 519 (shape: torch.Size([10, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.9453 ms, std=0.7899, mid=22.9629, max=24.6086, count=512
+Stage 1 execution times:
+		mean=20.6742 ms, std=0.7760, mid=20.6929, max=22.0227, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7535 ms, std=0.0324, mid=0.7553, max=0.7753, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0021, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1255 ms, std=0.0018, mid=0.1252, max=0.1447, count=512
+		mean=0.4377 GB/s, std=0.0061, mid=0.4389, max=0.4518, count=512
+Req 87 size: 255098880 number of tokens: 519 (shape: torch.Size([10, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.9518 ms, std=0.7874, mid=22.9715, max=24.5669, count=512
+Stage 1 execution times:
+		mean=20.6736 ms, std=0.7762, mid=20.7032, max=22.0177, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7537 ms, std=0.0324, mid=0.7555, max=0.7741, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0021, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1257 ms, std=0.0018, mid=0.1254, max=0.1330, count=512
+		mean=0.4370 GB/s, std=0.0061, mid=0.4380, max=0.4535, count=512
+Req 86 size: 255098880 number of tokens: 519 (shape: torch.Size([10, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=23.1117 ms, std=3.7843, mid=22.9661, max=106.8187, count=512
+Stage 1 execution times:
+		mean=20.6735 ms, std=0.7767, mid=20.7026, max=22.0702, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7535 ms, std=0.0326, mid=0.7555, max=0.7825, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0022, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1260 ms, std=0.0022, mid=0.1256, max=0.1554, count=512
+		mean=0.4361 GB/s, std=0.0071, mid=0.4372, max=0.4482, count=512
+Req 85 size: 255098880 number of tokens: 519 (shape: torch.Size([10, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.9532 ms, std=0.7876, mid=22.9764, max=24.4684, count=512
+Stage 1 execution times:
+		mean=20.6752 ms, std=0.7779, mid=20.7013, max=22.0120, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7538 ms, std=0.0324, mid=0.7555, max=0.7746, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0021, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1260 ms, std=0.0018, mid=0.1256, max=0.1340, count=512
+		mean=0.4362 GB/s, std=0.0060, mid=0.4372, max=0.4518, count=512
+Req 84 size: 255098880 number of tokens: 519 (shape: torch.Size([10, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.9587 ms, std=0.7860, mid=22.9789, max=24.5492, count=512
+Stage 1 execution times:
+		mean=20.6756 ms, std=0.7773, mid=20.6953, max=22.0125, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7532 ms, std=0.0324, mid=0.7555, max=0.7744, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0021, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1257 ms, std=0.0015, mid=0.1254, max=0.1330, count=512
+		mean=0.4370 GB/s, std=0.0053, mid=0.4380, max=0.4482, count=512
+Req 83 size: 255098880 number of tokens: 519 (shape: torch.Size([10, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.9645 ms, std=0.7817, mid=22.9862, max=24.5306, count=512
+Stage 1 execution times:
+		mean=20.6715 ms, std=0.7749, mid=20.7044, max=22.0256, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7536 ms, std=0.0324, mid=0.7558, max=0.7763, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0022, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1260 ms, std=0.0017, mid=0.1256, max=0.1345, count=512
+		mean=0.4361 GB/s, std=0.0058, mid=0.4372, max=0.4500, count=512
+Req 82 size: 255098880 number of tokens: 519 (shape: torch.Size([10, 8, 519, 64]))
+Execution Statistics:
+Stage 0 execution times:
+		mean=22.9721 ms, std=0.7854, mid=22.9859, max=24.4918, count=512
+Stage 1 execution times:
+		mean=20.6726 ms, std=0.7763, mid=20.6916, max=22.0289, count=512
+hidden state transfer from stage 1 to stage 0:
+		mean=0.7533 ms, std=0.0324, mid=0.7555, max=0.7741, count=512
+		mean=0.0001 GB/s, std=0.0001, mid=0.0001, max=0.0021, count=512
+hidden state transfer from stage 0 to stage 1:
+		mean=0.1258 ms, std=0.0018, mid=0.1254, max=0.1338, count=512
+		mean=0.4367 GB/s, std=0.0061, mid=0.4380, max=0.4474, count=512
+Req 81 size: 255098880 number of tokens: 519 (shape: torch.Size([10, 8, 519, 64]))
+Time to process 80 requests: 183.37 seconds
+------------------------------
+python ./main.py --batch 11 --num-requests 88 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 88 requests
+Batch size is: 11
+Req 96 size: 280924864
+Req 95 size: 280654528
+Req 94 size: 280924864
+Req 93 size: 280654528
+Req 92 size: 280924864
+Req 91 size: 280654528
+Req 90 size: 280924864
+Req 89 size: 280654528
+Time to process 88 requests: 103.27 seconds
+------------------------------
+python ./main.py --batch 11 --num-requests 88 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 88 requests
+Batch size is: 11
+Req 96 size: 280608768 number of tokens: 519 (shape: torch.Size([11, 8, 519, 64]))
+Req 95 size: 280608768 number of tokens: 519 (shape: torch.Size([11, 8, 519, 64]))
+Req 94 size: 280608768 number of tokens: 519 (shape: torch.Size([11, 8, 519, 64]))
+Req 93 size: 280608768 number of tokens: 519 (shape: torch.Size([11, 8, 519, 64]))
+Req 92 size: 280608768 number of tokens: 519 (shape: torch.Size([11, 8, 519, 64]))
+Req 91 size: 280608768 number of tokens: 519 (shape: torch.Size([11, 8, 519, 64]))
+Req 90 size: 280608768 number of tokens: 519 (shape: torch.Size([11, 8, 519, 64]))
+Req 89 size: 280608768 number of tokens: 519 (shape: torch.Size([11, 8, 519, 64]))
+Time to process 88 requests: 183.24 seconds
+------------------------------
+python ./main.py --batch 12 --num-requests 96 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 96 requests
+Batch size is: 12
+Req 104 size: 306463488
+Req 103 size: 306168576
+Req 102 size: 306463488
+Req 101 size: 306168576
+Req 100 size: 306463488
+Req 99 size: 306168576
+Req 98 size: 306463488
+Req 97 size: 306168576
+Time to process 96 requests: 103.57 seconds
+------------------------------
+python ./main.py --batch 12 --num-requests 96 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 96 requests
+Batch size is: 12
+Req 104 size: 306118656 number of tokens: 519 (shape: torch.Size([12, 8, 519, 64]))
+Req 103 size: 306118656 number of tokens: 519 (shape: torch.Size([12, 8, 519, 64]))
+Req 102 size: 306118656 number of tokens: 519 (shape: torch.Size([12, 8, 519, 64]))
+Req 101 size: 306118656 number of tokens: 519 (shape: torch.Size([12, 8, 519, 64]))
+Req 100 size: 306118656 number of tokens: 519 (shape: torch.Size([12, 8, 519, 64]))
+Req 99 size: 306118656 number of tokens: 519 (shape: torch.Size([12, 8, 519, 64]))
+Req 98 size: 306118656 number of tokens: 519 (shape: torch.Size([12, 8, 519, 64]))
+Req 97 size: 306118656 number of tokens: 519 (shape: torch.Size([12, 8, 519, 64]))
+Time to process 96 requests: 185.77 seconds
+------------------------------
+python ./main.py --batch 13 --num-requests 104 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 104 requests
+Batch size is: 13
+Req 112 size: 332002112
+Req 111 size: 331682624
+Req 110 size: 332002112
+Req 109 size: 331682624
+Req 108 size: 332002112
+Req 107 size: 331682624
+Req 106 size: 332002112
+Req 105 size: 331682624
+Time to process 104 requests: 104.10 seconds
+------------------------------
+python ./main.py --batch 13 --num-requests 104 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 104 requests
+Batch size is: 13
+Req 112 size: 331628544 number of tokens: 519 (shape: torch.Size([13, 8, 519, 64]))
+Req 111 size: 331628544 number of tokens: 519 (shape: torch.Size([13, 8, 519, 64]))
+Req 110 size: 331628544 number of tokens: 519 (shape: torch.Size([13, 8, 519, 64]))
+Req 109 size: 331628544 number of tokens: 519 (shape: torch.Size([13, 8, 519, 64]))
+Req 108 size: 331628544 number of tokens: 519 (shape: torch.Size([13, 8, 519, 64]))
+Req 107 size: 331628544 number of tokens: 519 (shape: torch.Size([13, 8, 519, 64]))
+Req 106 size: 331628544 number of tokens: 519 (shape: torch.Size([13, 8, 519, 64]))
+Req 105 size: 331628544 number of tokens: 519 (shape: torch.Size([13, 8, 519, 64]))
+Time to process 104 requests: 186.99 seconds
+------------------------------
+python ./main.py --batch 14 --num-requests 112 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+
+************************************
+Loading cuda/12.2
+  Loading requirement: libiconv/1.17-nhc3mhm xz/5.4.6-xxxg42c
+    zlib-ng/2.1.6-jkgunjc libxml2/2.10.3-zbbe7lm
+Loading python/3.11.7
+  Loading requirement: bzip2/1.0.8-ib3znej libmd/1.0.4-2km2lxx
+    libbsd/0.12.1-oocs6an expat/2.6.2-p2t4wry ncurses/6.5-svfl57u
+    readline/8.2-zeda6mx gdbm/1.23-wiol7vk pigz/2.8-5bwzpml zstd/1.5.6-uq5yyux
+    tar/1.34-jgektnv gettext/0.22.5-hsxgafg libffi/3.4.6-4vs4jpp
+    libxcrypt/4.4.35-7om46b5 sqlite/3.43.2-4kl5mnp
+    util-linux-uuid/2.38.1-5achpds
+Sun Sep 21 20:13:48 2025       
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 535.54.03              Driver Version: 535.54.03    CUDA Version: 12.2     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  NVIDIA A100-SXM-64GB           On  | 00000000:56:00.0 Off |                    0 |
+| N/A   44C    P0             ERR! / 470W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   1  NVIDIA A100-SXM-64GB           On  | 00000000:8F:00.0 Off |                    0 |
+| N/A   43C    P0              63W / 466W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   2  NVIDIA A100-SXM-64GB           On  | 00000000:C8:00.0 Off |                    0 |
+| N/A   43C    P0              62W / 459W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+                                                                                         
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|  No running processes found                                                           |
++---------------------------------------------------------------------------------------+
+	[4mGPU0	GPU1	GPU2	NIC0	NIC1	NIC2	NIC3	CPU Affinity	NUMA Affinity	GPU NUMA ID[0m
+GPU0	 X 	NV4	NV4	SYS	PXB	SYS	SYS	4-11	0-1		N/A
+GPU1	NV4	 X 	NV4	SYS	SYS	PXB	SYS	4-11	0-1		N/A
+GPU2	NV4	NV4	 X 	SYS	SYS	SYS	PXB	4-11	0-1		N/A
+NIC0	SYS	SYS	SYS	 X 	SYS	SYS	SYS				
+NIC1	PXB	SYS	SYS	SYS	 X 	SYS	SYS				
+NIC2	SYS	PXB	SYS	SYS	SYS	 X 	SYS				
+NIC3	SYS	SYS	PXB	SYS	SYS	SYS	 X 				
+
+Legend:
+
+  X    = Self
+  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)
+  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node
+  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)
+  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)
+  PIX  = Connection traversing at most a single PCIe bridge
+  NV#  = Connection traversing a bonded set of # NVLinks
+
+NIC Legend:
+
+  NIC0: mlx5_0
+  NIC1: mlx5_1
+  NIC2: mlx5_2
+  NIC3: mlx5_3
+
+python ./main.py --batch 16 --num-requests 128 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 128 requests
+Batch size is: 16
+Req 136 size: 408617984
+Req 135 size: 408224768
+Req 134 size: 408617984
+Req 133 size: 408224768
+Req 132 size: 408617984
+Req 131 size: 408224768
+Req 130 size: 408617984
+Req 129 size: 408224768
+Time to process 128 requests: 106.88 seconds
+------------------------------
+python ./main.py --batch 16 --num-requests 128 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 128 requests
+Batch size is: 16
+Req 136 size: 408158208 number of tokens: 519 (shape: torch.Size([16, 8, 519, 64]))
+Req 135 size: 408158208 number of tokens: 519 (shape: torch.Size([16, 8, 519, 64]))
+Req 134 size: 408158208 number of tokens: 519 (shape: torch.Size([16, 8, 519, 64]))
+Req 133 size: 408158208 number of tokens: 519 (shape: torch.Size([16, 8, 519, 64]))
+Req 132 size: 408158208 number of tokens: 519 (shape: torch.Size([16, 8, 519, 64]))
+Req 131 size: 408158208 number of tokens: 519 (shape: torch.Size([16, 8, 519, 64]))
+Req 130 size: 408158208 number of tokens: 519 (shape: torch.Size([16, 8, 519, 64]))
+Req 129 size: 408158208 number of tokens: 519 (shape: torch.Size([16, 8, 519, 64]))
+Time to process 128 requests: 192.18 seconds
+------------------------------
+python ./main.py --batch 32 --num-requests 256 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 256 requests
+Batch size is: 32
+Req 264 size: 817235968
+Req 263 size: 816449536
+Req 262 size: 817235968
+Req 261 size: 816449536
+Req 260 size: 817235968
+Req 259 size: 816449536
+Req 258 size: 817235968
+Req 257 size: 816449536
+Time to process 256 requests: 120.61 seconds
+------------------------------
+python ./main.py --batch 32 --num-requests 256 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 256 requests
+Batch size is: 32
+Req 264 size: 816316416 number of tokens: 519 (shape: torch.Size([32, 8, 519, 64]))
+Req 263 size: 816316416 number of tokens: 519 (shape: torch.Size([32, 8, 519, 64]))
+Req 262 size: 816316416 number of tokens: 519 (shape: torch.Size([32, 8, 519, 64]))
+Req 261 size: 816316416 number of tokens: 519 (shape: torch.Size([32, 8, 519, 64]))
+Req 260 size: 816316416 number of tokens: 519 (shape: torch.Size([32, 8, 519, 64]))
+Req 259 size: 816316416 number of tokens: 519 (shape: torch.Size([32, 8, 519, 64]))
+Req 258 size: 816316416 number of tokens: 519 (shape: torch.Size([32, 8, 519, 64]))
+Req 257 size: 816316416 number of tokens: 519 (shape: torch.Size([32, 8, 519, 64]))
+Time to process 256 requests: 217.39 seconds
+------------------------------
+python ./main.py --batch 64 --num-requests 512 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 512 requests
+Batch size is: 64
+Req 520 size: 1634471936
+Req 519 size: 1632899072
+Req 518 size: 1634471936
+Req 517 size: 1632899072
+Req 516 size: 1634471936
+Req 515 size: 1632899072
+Req 514 size: 1634471936
+Req 513 size: 1632899072
+Time to process 512 requests: 150.82 seconds
+------------------------------
+python ./main.py --batch 64 --num-requests 512 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 512 requests
+Batch size is: 64
+Req 520 size: 1632632832 number of tokens: 519 (shape: torch.Size([64, 8, 519, 64]))
+Req 519 size: 1632632832 number of tokens: 519 (shape: torch.Size([64, 8, 519, 64]))
+Req 518 size: 1632632832 number of tokens: 519 (shape: torch.Size([64, 8, 519, 64]))
+Req 517 size: 1632632832 number of tokens: 519 (shape: torch.Size([64, 8, 519, 64]))
+Req 516 size: 1632632832 number of tokens: 519 (shape: torch.Size([64, 8, 519, 64]))
+Req 515 size: 1632632832 number of tokens: 519 (shape: torch.Size([64, 8, 519, 64]))
+Req 514 size: 1632632832 number of tokens: 519 (shape: torch.Size([64, 8, 519, 64]))
+Req 513 size: 1632632832 number of tokens: 519 (shape: torch.Size([64, 8, 519, 64]))
+Time to process 512 requests: 272.75 seconds
+------------------------------
+python ./main.py --batch 128 --num-requests 1024 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 1024 requests
+Batch size is: 128
+Req 1032 size: 3268943872
+Req 1031 size: 3265798144
+Req 1030 size: 3268943872
+Req 1029 size: 3265798144
+Req 1028 size: 3268943872
+Req 1027 size: 3265798144
+Req 1026 size: 3268943872
+Req 1025 size: 3265798144
+Time to process 1024 requests: 247.56 seconds
+------------------------------
+python ./main.py --batch 128 --num-requests 1024 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 1024 requests
+Batch size is: 128
+Req 1032 size: 3265265664 number of tokens: 519 (shape: torch.Size([128, 8, 519, 64]))
+Req 1031 size: 3265265664 number of tokens: 519 (shape: torch.Size([128, 8, 519, 64]))
+Req 1030 size: 3265265664 number of tokens: 519 (shape: torch.Size([128, 8, 519, 64]))
+Req 1029 size: 3265265664 number of tokens: 519 (shape: torch.Size([128, 8, 519, 64]))
+Req 1028 size: 3265265664 number of tokens: 519 (shape: torch.Size([128, 8, 519, 64]))
+Req 1027 size: 3265265664 number of tokens: 519 (shape: torch.Size([128, 8, 519, 64]))
+Req 1026 size: 3265265664 number of tokens: 519 (shape: torch.Size([128, 8, 519, 64]))
+Req 1025 size: 3265265664 number of tokens: 519 (shape: torch.Size([128, 8, 519, 64]))
+Time to process 1024 requests: 384.66 seconds
+------------------------------
+python ./main.py --batch 256 --num-requests 2048 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 2048 requests
+Batch size is: 256
+Req 2056 size: 6537887744
+Req 2055 size: 6531596288
+Req 2054 size: 6537887744
+Req 2053 size: 6531596288
+Req 2052 size: 6537887744
+Req 2051 size: 6531596288
+Req 2050 size: 6537887744
+Req 2049 size: 6531596288
+Time to process 2048 requests: 474.35 seconds
+------------------------------
+python ./main.py --batch 256 --num-requests 2048 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 2048 requests
+Batch size is: 256
+Req 2056 size: 6530531328 number of tokens: 519 (shape: torch.Size([256, 8, 519, 64]))
+Req 2055 size: 6530531328 number of tokens: 519 (shape: torch.Size([256, 8, 519, 64]))
+Req 2054 size: 6530531328 number of tokens: 519 (shape: torch.Size([256, 8, 519, 64]))
+Req 2053 size: 6530531328 number of tokens: 519 (shape: torch.Size([256, 8, 519, 64]))
+Req 2052 size: 6530531328 number of tokens: 519 (shape: torch.Size([256, 8, 519, 64]))
+Req 2051 size: 6530531328 number of tokens: 519 (shape: torch.Size([256, 8, 519, 64]))
+Req 2050 size: 6530531328 number of tokens: 519 (shape: torch.Size([256, 8, 519, 64]))
+Req 2049 size: 6530531328 number of tokens: 519 (shape: torch.Size([256, 8, 519, 64]))
+Time to process 2048 requests: 651.04 seconds
+------------------------------
+python ./main.py --batch 512 --num-requests 4096 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 4096 requests
+Batch size is: 512
+Req 4104 size: 13075775488
+Req 4103 size: 13063192576
+Req 4102 size: 13075775488
+Req 4101 size: 13063192576
+Req 4100 size: 13075775488
+Req 4099 size: 13063192576
+Req 4098 size: 13075775488
+Req 4097 size: 13063192576
+Time to process 4096 requests: 1080.64 seconds
+------------------------------
+python ./main.py --batch 512 --num-requests 4096 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+
+*******************************************
+
+Loading cuda/12.2
+  Loading requirement: libiconv/1.17-nhc3mhm xz/5.4.6-xxxg42c
+    zlib-ng/2.1.6-jkgunjc libxml2/2.10.3-zbbe7lm
+Loading python/3.11.7
+  Loading requirement: bzip2/1.0.8-ib3znej libmd/1.0.4-2km2lxx
+    libbsd/0.12.1-oocs6an expat/2.6.2-p2t4wry ncurses/6.5-svfl57u
+    readline/8.2-zeda6mx gdbm/1.23-wiol7vk pigz/2.8-5bwzpml zstd/1.5.6-uq5yyux
+    tar/1.34-jgektnv gettext/0.22.5-hsxgafg libffi/3.4.6-4vs4jpp
+    libxcrypt/4.4.35-7om46b5 sqlite/3.43.2-4kl5mnp
+    util-linux-uuid/2.38.1-5achpds
+Sun Sep 21 23:20:54 2025       
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 535.54.03              Driver Version: 535.54.03    CUDA Version: 12.2     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  NVIDIA A100-SXM-64GB           On  | 00000000:56:00.0 Off |                    0 |
+| N/A   44C    P0             ERR! / 470W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   1  NVIDIA A100-SXM-64GB           On  | 00000000:8F:00.0 Off |                    0 |
+| N/A   43C    P0              63W / 466W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   2  NVIDIA A100-SXM-64GB           On  | 00000000:C8:00.0 Off |                    0 |
+| N/A   43C    P0              62W / 459W |      2MiB / 65536MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+                                                                                         
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|  No running processes found                                                           |
++---------------------------------------------------------------------------------------+
+	[4mGPU0	GPU1	GPU2	NIC0	NIC1	NIC2	NIC3	CPU Affinity	NUMA Affinity	GPU NUMA ID[0m
+GPU0	 X 	NV4	NV4	SYS	PXB	SYS	SYS	4-11	0-1		N/A
+GPU1	NV4	 X 	NV4	SYS	SYS	PXB	SYS	4-11	0-1		N/A
+GPU2	NV4	NV4	 X 	SYS	SYS	SYS	PXB	4-11	0-1		N/A
+NIC0	SYS	SYS	SYS	 X 	SYS	SYS	SYS				
+NIC1	PXB	SYS	SYS	SYS	 X 	SYS	SYS				
+NIC2	SYS	PXB	SYS	SYS	SYS	 X 	SYS				
+NIC3	SYS	SYS	PXB	SYS	SYS	SYS	 X 				
+
+Legend:
+
+  X    = Self
+  SYS  = Connection traversing PCIe as well as the SMP interconnect between NUMA nodes (e.g., QPI/UPI)
+  NODE = Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node
+  PHB  = Connection traversing PCIe as well as a PCIe Host Bridge (typically the CPU)
+  PXB  = Connection traversing multiple PCIe bridges (without traversing the PCIe Host Bridge)
+  PIX  = Connection traversing at most a single PCIe bridge
+  NV#  = Connection traversing a bonded set of # NVLinks
+
+NIC Legend:
+
+  NIC0: mlx5_0
+  NIC1: mlx5_1
+  NIC2: mlx5_2
+  NIC3: mlx5_3
+
+python ./main.py --batch 512 --num-requests 4096 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 4096 requests
+Batch size is: 512
+Req 4104 size: 13075775488
+Req 4103 size: 13063192576
+Req 4102 size: 13075775488
+Req 4101 size: 13063192576
+Req 4100 size: 13075775488
+Req 4099 size: 13063192576
+Req 4098 size: 13075775488
+Req 4097 size: 13063192576
+Time to process 4096 requests: 1070.65 seconds
+------------------------------
+python ./main.py --batch 512 --num-requests 4096 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 4096 requests
+Batch size is: 512
+Req 4104 size: 13061062656 number of tokens: 519 (shape: torch.Size([512, 8, 519, 64]))
+Req 4103 size: 13061062656 number of tokens: 519 (shape: torch.Size([512, 8, 519, 64]))
+Req 4102 size: 13061062656 number of tokens: 519 (shape: torch.Size([512, 8, 519, 64]))
+Req 4101 size: 13061062656 number of tokens: 519 (shape: torch.Size([512, 8, 519, 64]))
+Req 4100 size: 13061062656 number of tokens: 519 (shape: torch.Size([512, 8, 519, 64]))
+Req 4099 size: 13061062656 number of tokens: 519 (shape: torch.Size([512, 8, 519, 64]))
+Req 4098 size: 13061062656 number of tokens: 519 (shape: torch.Size([512, 8, 519, 64]))
+Req 4097 size: 13061062656 number of tokens: 519 (shape: torch.Size([512, 8, 519, 64]))
+Time to process 4096 requests: 1202.45 seconds
+------------------------------
+python ./main.py --batch 1024 --num-requests 8192 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 8192 requests
+Batch size is: 1024
+Req 8200 size: 26151550976
+Req 8199 size: 26126385152
+Req 8198 size: 26151550976
+Req 8197 size: 26126385152
+Req 8196 size: 26151550976
+Req 8195 size: 26126385152
+Req 8194 size: 26151550976
+Req 8193 size: 26126385152
+Time to process 8192 requests: 2905.45 seconds
+------------------------------
+python ./main.py --batch 1024 --num-requests 8192 --pipeline simple --iters 512
+Running experiment with pipeline mode: simple
+Loaded. Model size: 41829796736
+loading: 0
+loading: 1
+cuda:0 : Memory usage: 20915896320
+cuda:1 : Memory usage: 20915908096
+cuda:2 : Memory usage: 0
+Processing a pile of 8192 requests
+Batch size is: 1024
+Req 8200 size: 26122125312 number of tokens: 519 (shape: torch.Size([1024, 8, 519, 64]))
+Req 8199 size: 26122125312 number of tokens: 519 (shape: torch.Size([1024, 8, 519, 64]))
+Req 8198 size: 26122125312 number of tokens: 519 (shape: torch.Size([1024, 8, 519, 64]))
+Req 8197 size: 26122125312 number of tokens: 519 (shape: torch.Size([1024, 8, 519, 64]))
+Req 8196 size: 26122125312 number of tokens: 519 (shape: torch.Size([1024, 8, 519, 64]))
+Req 8195 size: 26122125312 number of tokens: 519 (shape: torch.Size([1024, 8, 519, 64]))
+Req 8194 size: 26122125312 number of tokens: 519 (shape: torch.Size([1024, 8, 519, 64]))
+Req 8193 size: 26122125312 number of tokens: 519 (shape: torch.Size([1024, 8, 519, 64]))
+Time to process 8192 requests: 2370.20 seconds
+------------------------------
+python ./main.py --batch 2048 --num-requests 16384 --pipeline swapping --iters 512
+Running experiment with pipeline mode: swapping
+
