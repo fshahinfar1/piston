@@ -12,30 +12,35 @@
 #SBATCH --output=out_is_mem_bound/stdout.txt
 #SBATCH --error=out_is_mem_bound/stderr.txt
 
-module load cuda/12.2
-module load python/3.11.7
+LEONARDO=false
 
-# NOTE: $HOME is very slow < 300MB/s $SCRATCH should be the fastest but is temporary
-export HF_HOME="$WORK/$USER/huggingface"
+if [ $LEONARDO = true ]; then
 
-# VNEV
-VENV_DIR=$HOME/my_venv
-if [ ! -d $VENV_DIR ]; then
-	python3 -m venv $VENV_DIR
-	source $VENV_DIR/bin/activate
-	python3 -m pip install -U pip
-	python3 -m pip install -r ./requirements.txt
-	deactivate
-fi
-source $VENV_DIR/bin/activate 
+  module load cuda/12.2
+  module load python/3.11.7
+
+  # NOTE: $HOME is very slow < 300MB/s $SCRATCH should be the fastest but is temporary
+  export HF_HOME="$WORK/$USER/huggingface"
+
+  # VNEV
+  VENV_DIR=$HOME/my_venv
+  if [ ! -d $VENV_DIR ]; then
+    python3 -m venv $VENV_DIR
+    source $VENV_DIR/bin/activate
+    python3 -m pip install -U pip
+    python3 -m pip install -r ./requirements.txt
+    deactivate
+  fi
+  source $VENV_DIR/bin/activate 
 
 
-nvidia-smi
-nvidia-smi topo -m
+  nvidia-smi
+  nvidia-smi topo -m
 
-export TMPDIR="$WORK/$USER/tmp"
-if [ ! -d $TMPDIR ]; then
-  mkdir $TMPDIR
+  export TMPDIR="$WORK/$USER/tmp"
+  if [ ! -d $TMPDIR ]; then
+    mkdir $TMPDIR
+  fi
 fi
 
 OUTDIR=$HOME/res_decode_is_mem_bound/
@@ -45,9 +50,10 @@ mkdir -p $OUTDIR/swapping
 # Stop when there is an error
 set -e
 
-NUM_REQ=1024
-ITERATION=512
-BATCH_SIZES=( 512 256 128 64 32 16 1 )
+NUM_REQ=256
+ITERATION=32
+# BATCH_SIZES=( 1024 512 256 128 64 32 16 1 )
+BATCH_SIZES=( 1 2 4 8 16 32 64 128 256 )
 PIPELINE="simple"
 
 for B in ${BATCH_SIZES[@]}; do

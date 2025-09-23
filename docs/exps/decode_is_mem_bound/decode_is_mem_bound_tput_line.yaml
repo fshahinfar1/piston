@@ -1,0 +1,17 @@
+figsize: [3, 2]
+subplots:
+  # Throughput
+  - lines:
+    - label: 'baseline pipeline'
+      x: [1,2,4,8,16,32,64,128,256]
+      y: [282.07,153.81,80.72,42.18,23.56,14.50,8.63,5.97,5.68]
+      color: 'tab:red'
+      linestyle: '-'
+    ylabel: 'Time (sec)'
+    xlabel: 'Batch size'
+    xlogscale: 2
+    yticks: [0, 60, 120, 180, 240, 300]
+    xticks: [1, 4, 16, 64,  256]
+    xtick_labels: [1, 4, 16, 64,  256]
+grid: true
+output: 'decode_is_mem_bound_tput.pdf'

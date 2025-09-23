@@ -1,0 +1,18 @@
+
+figsize: [3, 2]
+subplots:
+  # Memory usage
+  - lines:
+    - label: 'KV cache memory size'
+      x: [1,2,4,8,16,32,64,128,256]
+      y: [0.01,0.03,0.06,0.12,0.23,0.47,0.94,1.88,3.75]
+      color: 'tab:blue'
+      linestyle: ':'
+    ylabel: 'KV cache size (GB)'
+    xlabel: 'Batch size'
+    yticks: [0, 1, 2, 3, 4]
+    xlogscale: 2
+    xticks: [1, 4, 16, 64,  256]
+    xtick_labels: [1, 4, 16, 64,  256]
+grid: true
+output: 'decode_is_mem_bound_usage.pdf'
