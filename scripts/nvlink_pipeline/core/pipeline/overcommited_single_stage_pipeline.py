@@ -34,6 +34,9 @@ class CircularRange:
         return self.dist
 
     def __contains__(self, other:int) -> bool:
+        if other >= self.size:
+            return False
+
         if self.begin < self.end:
             # straight range
             return other >= self.begin and other < self.end
@@ -75,6 +78,7 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
         self.dev = self.replica.stages[0].device
         # How much memory do we have for KV-cache (only use 90% of available memory and leave the rest for hidden state)
         self.available_memory = torch.cuda.memory_allocated(self.dev) * 0.9
+        self.available_memory = 128 * 1024 * 1024
         print('Single Stage Swapping Pipeline: Available memory:', self.available_memory)
 
         self._count_layers = 0
@@ -159,7 +163,7 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
         dev_map = [None] * num_layers
         for i in range(load_layers):
             dev_map[i] = self.dev
-        req.move_to(dev_map, non_blocking=True)
+        req.move_to(dev_map, non_blocking=False)
 
         self._count_layers = num_layers
         self._load_layers = CircularRange(0, load_layers, num_layers)
@@ -219,7 +223,9 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
             # print('-- layer:', k)
             # we should block until the KV cache of the layer is loaded
             while k not in self._load_layers:
-                torch.cuda.synchronize()
+                while self._in_flight_copies[0]:  
+                    self._in_flight_copies[0].pop().wait()
+                torch.cuda.synchronize(stage.device)
                 # print('waiting:', k, self._load_layers)
             
             hidden_states = decoder_layer(
@@ -295,8 +301,8 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
             # Load as much as KV cache as we can
             self._initial_load_kv_cache(req)
             # Make sure initial token is on the device
-            req.next_token_ids = req.next_token_ids.to(self.dev, non_blocking=True)
-            torch.cuda.synchronize()
+            req.next_token_ids = req.next_token_ids.to(self.dev, non_blocking=False)
+            torch.cuda.synchronize(self.dev)
 
             # stat = ExecutionStatistics(self.num_stages)
             stat = None
@@ -307,6 +313,11 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
 
             self.print_output(req)
             # stat.report()
+
+            # TODO: we are doing some extra and unnecessary data copy :|
+            while self._in_flight_copies[0]:
+                self._in_flight_copies[0].pop().wait()
+            torch.cuda.synchronize()
 
             # free memory of requests
             print('Req', req.id, 'size:', req.bytes())

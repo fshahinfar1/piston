@@ -1,0 +1,11 @@
+figsize: [3,2]
+x: ['baseline', 'with swapping']
+y: [[10.64, 0],
+    [0, 6.19]]
+color: ['k', 'tab:red']
+hatch: ['', 'xx']
+bar_width: 0.2
+ylabel: 'Time (sec)'
+yticks: [0, 3, 6, 9, 12]
+grid: true
+output: 'single_stage_benefit.pdf'

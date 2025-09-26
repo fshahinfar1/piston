@@ -1,0 +1,44 @@
+((pyvenv) ) farbod@nslrack31:~/dev/piston/scripts/nvlink_pipeline$ python ./main.py --batch 8 --num-request 64 --iters 32 --num-stages 1 --pipeline swapping 
+Running experiment with pipeline mode: swapping Number of stages: 1
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:00<00:00,  3.32it/s]
+Loaded. Model size: 7642159296
+loading: 0
+cuda:0 : Memory usage: 7642421248
+cuda:0 : Memory usage: 7642421248
+cuda:0 : Memory usage: 7642421248
+Single Stage Swapping Pipeline: Available memory: 134217728
+Processing a pile of 64 requests
+Batch size is: 8
+Number of layers on device memory: 32 / 32
+Req 72 size: 125831744
+Number of layers on device memory: 32 / 32
+Req 71 size: 125831744
+Number of layers on device memory: 32 / 32
+Req 70 size: 125831744
+Number of layers on device memory: 32 / 32
+Req 69 size: 125831744
+Number of layers on device memory: 32 / 32
+Req 68 size: 125831744
+Number of layers on device memory: 32 / 32
+Req 67 size: 125831744
+Number of layers on device memory: 32 / 32
+Req 66 size: 125831744
+Number of layers on device memory: 32 / 32
+Req 65 size: 125831744
+Time to process 64 requests: 10.64 seconds
+((pyvenv) ) farbod@nslrack31:~/dev/piston/scripts/nvlink_pipeline$ python ./main.py --batch 32 --num-request 64 --iters 32 --num-stages 1 --pipeline swapping 
+Running experiment with pipeline mode: swapping Number of stages: 1
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:00<00:00,  3.02it/s]
+Loaded. Model size: 7642159296
+loading: 0
+cuda:0 : Memory usage: 7642421248
+cuda:0 : Memory usage: 7642421248
+cuda:0 : Memory usage: 7642421248
+Single Stage Swapping Pipeline: Available memory: 134217728
+Processing a pile of 64 requests
+Batch size is: 32
+Number of layers on device memory: 8 / 32
+Req 66 size: 503326976
+Number of layers on device memory: 8 / 32
+Req 65 size: 503326976
+Time to process 64 requests: 6.19 seconds
