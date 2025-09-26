@@ -11,39 +11,44 @@
 #SBATCH --output=output/stdout.txt
 #SBATCH --error=output/stderr.txt
 
-module load cuda/12.2
-module load python/3.11.7
+LEONARDO=false
 
-# NOTE: $HOME is very slow < 300MB/s $SCRATCH should be the fastest but is temporary
-export HF_HOME="$WORK/$USER/huggingface"
+if [ $LEONARDO = true ]; then
+  module load cuda/12.2
+  module load python/3.11.7
 
-# VNEV
-VENV_DIR=$HOME/my_venv
-if [ ! -d $VENV_DIR ]; then
-	python3 -m venv $VENV_DIR
-	source $VENV_DIR/bin/activate
-	python3 -m pip install -U pip
-	python3 -m pip install -r ./requirements.txt
-	deactivate
-fi
-source $VENV_DIR/bin/activate 
+  # NOTE: $HOME is very slow < 300MB/s $SCRATCH should be the fastest but is temporary
+  export HF_HOME="$WORK/$USER/huggingface"
+
+  # VNEV
+  VENV_DIR=$HOME/my_venv
+  if [ ! -d $VENV_DIR ]; then
+    python3 -m venv $VENV_DIR
+    source $VENV_DIR/bin/activate
+    python3 -m pip install -U pip
+    python3 -m pip install -r ./requirements.txt
+    deactivate
+  fi
+  source $VENV_DIR/bin/activate 
 
 
-nvidia-smi
-nvidia-smi topo -m
+  nvidia-smi
+  nvidia-smi topo -m
 
-export TMPDIR="$WORK/$USER/tmp"
-if [ ! -d $TMPDIR ]; then
-  mkdir $TMPDIR
+  export TMPDIR="$WORK/$USER/tmp"
+  if [ ! -d $TMPDIR ]; then
+    mkdir $TMPDIR
+  fi
+
 fi
 
 nsys profile \
   --output=nvlink_pipeline \
   --trace=cuda,nvtx,osrt \
   --sample=none \
-  --gpu-metrics-device=all \
+  --gpu-metrics-devices=all \
   --force-overwrite=true \
-  python ./main.py
+  python ./main.py --batch 512 --num-request 512 --iters 32 --num-stages 1 --pipeline swapping
 
 sync -f ./
 sync

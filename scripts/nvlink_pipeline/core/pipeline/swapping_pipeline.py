@@ -99,7 +99,6 @@ class SwappingPipeline(SimplePipeline):
                 # Get ready for the generation of next token
                 req1.hidden_states = req1.next_token_ids
 
-            # req1.next_token_ids = req1.next_token_ids.to(next_stage.device, non_blocking=True)
             req1.move_hidden_state_to(next_stage.device, non_blocking=True)
 
     def _do_move_kv_cache_layer(self, stage_index, layer_index):
@@ -119,19 +118,17 @@ class SwappingPipeline(SimplePipeline):
             # move this layer of KV cache to the spare device in parallel
             dev_map = [None] * len(req1.cache.layers)
             dev_map[layer_index] = self.spare_memory_device
-            req1.move_to(dev_map, non_blocking=True)
+            req1.move_to(dev_map, non_blocking=False)
 
             # bring the layer for the other KV cache to this device
             dev_map = [None] * len(req2.cache.layers)
             dev_map[layer_index] = stage.device
-            req2.move_to(dev_map, non_blocking=True)
+            req2.move_to(dev_map, non_blocking=False)
 
     def _move_kv_cache_layer(self, stage_index, layer_index):
         """
         This is called when forward pass finishes processing a layer.
         Start moving that layers KV-cache to spare memory
-
-        TODO: start loading the KV-cache for that layer of other requests
 
         stage: user provided state when registering the callback
         layer_index: index of layer that got finished
