@@ -1,5 +1,5 @@
 figsize: [3,2]
-x: ['baseline', 'with swapping']
+x: ["baseline\nbatch: 8\n125 MB", "with swapping\nbatch: 32\n500 MB"]
 y: [[10.64, 0],
     [0, 6.19]]
 color: ['k', 'tab:red']
