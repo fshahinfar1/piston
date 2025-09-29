@@ -12,7 +12,7 @@ def stats(lst: List[float]) -> Tuple[float, float, float, float, float]:
 
 
 class ExecutionStatistics:
-    def __init__(self, num_stages: int):
+    def __init__(self, num_stages: int, num_layers: List[int]):
         self.stage_exec_times: Dict[int, List[int]] = {
             i: [] for i in range(num_stages)
         }
@@ -22,6 +22,7 @@ class ExecutionStatistics:
         self.hidden_state_transfer_size: Dict[int, List[int]] = {
             i: [] for i in range(num_stages)
         }
+        self.num_layers = num_layers
 
     def report(self) -> None:
         num_stages = len(self.stage_exec_times)
@@ -31,6 +32,12 @@ class ExecutionStatistics:
             mean, std, mid, _max, count = stats(exec_times)
             print(f"Stage {stage_index} execution times:")
             print(f"\t\tmean={mean:.4f} ms, std={std:.4f}, mid={mid:.4f}, max={_max:.4f}, count={count}")
+
+            layer_time = [t / self.num_layers[stage_index] for t in exec_times]
+            mean, std, mid, _max, count = stats(layer_time)
+            print(f"Per layer in stage {stage_index} execution times (total divided by num layers):")
+            print(f"\t\tmean={mean:.4f} ms, std={std:.4f}, mid={mid:.4f}, max={_max:.4f}, count={count}")
+
         for stage_index, transfer_times in self.hidden_state_transfer_times.items():
             mean, std, mid, _max, count = stats(transfer_times)
             print(f"hidden state transfer from stage {(stage_index - 1) % num_stages} to stage {stage_index}:")

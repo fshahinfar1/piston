@@ -71,15 +71,16 @@ class SimplePipeline:
         torch.cuda.synchronize()
 
     def _do_process_reqeust(self, req: Request) -> None:
-        # stat = ExecutionStatistics(self.num_stages)
-        stat = None
+        stat = ExecutionStatistics(self.num_stages,
+                                   [len(s.layers) for s in self.replica.stages])
+        # stat = None
         for _ in range(self.max_length):
             next_token = self.replica.do_one_iteration(req, stat)
             req.generated.append(next_token)
             req.next_token_ids = next_token
 
         self.print_output(req)
-        # stat.report()
+        stat.report()
         tmp = req.cache.layers[0].keys.shape
         print('Req', req.id, 'size:', req.cache_size_bytes(), 'number of tokens:', tmp[2], f'(shape: {tmp})')
         req.free()
