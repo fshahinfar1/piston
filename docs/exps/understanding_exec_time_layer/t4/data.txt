@@ -1,0 +1,121 @@
+B: 1 I: 1  KV Size: 2.25 MB  ::                 mean=1.0543 ms, std=0.0000, mid=1.0543, max=1.0543, count=1
+B: 1 I: 2  KV Size: 2.62 MB  ::                 mean=1.0905 ms, std=0.0371, mid=1.0905, max=1.1275, count=2
+B: 1 I: 4  KV Size: 3.38 MB  ::                 mean=1.0659 ms, std=0.0207, mid=1.0546, max=1.1017, count=4
+B: 1 I: 8  KV Size: 4.88 MB  ::                 mean=1.0206 ms, std=0.0045, mid=1.0187, max=1.0307, count=8
+B: 1 I: 16  KV Size: 7.88 MB  ::                mean=1.0279 ms, std=0.0083, mid=1.0277, max=1.0421, count=16
+B: 1 I: 32  KV Size: 13.88 MB  ::               mean=1.0310 ms, std=0.0082, mid=1.0320, max=1.0415, count=32
+B: 1 I: 64  KV Size: 25.88 MB  ::               mean=1.0426 ms, std=0.0124, mid=1.0459, max=1.0901, count=64
+B: 1 I: 128  KV Size: 49.88 MB  ::              mean=1.0491 ms, std=0.0103, mid=1.0504, max=1.0726, count=128
+B: 1 I: 256  KV Size: 97.88 MB  ::              mean=1.0778 ms, std=0.0243, mid=1.0802, max=1.1107, count=256
+B: 1 I: 512  KV Size: 193.88 MB  ::             mean=1.1060 ms, std=0.0270, mid=1.1140, max=1.1484, count=512
+B: 1 I: 1024  KV Size: 385.88 MB  ::            mean=1.1608 ms, std=0.0540, mid=1.1543, max=1.2674, count=1024
+B: 2 I: 1  KV Size: 4.50 MB  ::                 mean=1.3499 ms, std=0.0000, mid=1.3499, max=1.3499, count=1
+B: 2 I: 2  KV Size: 5.25 MB  ::                 mean=1.1017 ms, std=0.0007, mid=1.1017, max=1.1024, count=2
+B: 2 I: 4  KV Size: 6.75 MB  ::                 mean=1.1023 ms, std=0.0011, mid=1.1023, max=1.1038, count=4
+B: 2 I: 8  KV Size: 9.75 MB  ::                 mean=1.1015 ms, std=0.0012, mid=1.1016, max=1.1033, count=8
+B: 2 I: 16  KV Size: 15.75 MB  ::               mean=1.1036 ms, std=0.0020, mid=1.1041, max=1.1065, count=16
+B: 2 I: 32  KV Size: 27.75 MB  ::               mean=1.1051 ms, std=0.0043, mid=1.1050, max=1.1179, count=32
+B: 2 I: 64  KV Size: 51.75 MB  ::               mean=1.1118 ms, std=0.0070, mid=1.1116, max=1.1250, count=64
+B: 2 I: 128  KV Size: 99.75 MB  ::              mean=1.1243 ms, std=0.0136, mid=1.1259, max=1.1531, count=128
+B: 2 I: 256  KV Size: 195.75 MB  ::             mean=1.1496 ms, std=0.0285, mid=1.1527, max=1.2043, count=256
+B: 2 I: 512  KV Size: 387.75 MB  ::             mean=1.2043 ms, std=0.0605, mid=1.2045, max=1.3194, count=512
+B: 2 I: 1024  KV Size: 771.75 MB  ::            mean=1.3128 ms, std=0.1232, mid=1.3154, max=1.5303, count=1024
+B: 4 I: 1  KV Size: 13.50 MB  ::                mean=1.4628 ms, std=0.0000, mid=1.4628, max=1.4628, count=1
+B: 4 I: 2  KV Size: 15.00 MB  ::                mean=1.2014 ms, std=0.0002, mid=1.2014, max=1.2017, count=2
+B: 4 I: 4  KV Size: 18.00 MB  ::                mean=1.2228 ms, std=0.0114, mid=1.2182, max=1.2421, count=4
+B: 4 I: 8  KV Size: 24.00 MB  ::                mean=1.1933 ms, std=0.0033, mid=1.1937, max=1.1991, count=8
+B: 4 I: 16  KV Size: 36.00 MB  ::               mean=1.1961 ms, std=0.0048, mid=1.1965, max=1.2039, count=16
+B: 4 I: 32  KV Size: 60.00 MB  ::               mean=1.2018 ms, std=0.0097, mid=1.2014, max=1.2273, count=32
+B: 4 I: 64  KV Size: 108.00 MB  ::              mean=1.2143 ms, std=0.0131, mid=1.2153, max=1.2463, count=64
+B: 4 I: 128  KV Size: 204.00 MB  ::             mean=1.2597 ms, std=0.2692, mid=1.2336, max=4.2760, count=128
+B: 4 I: 256  KV Size: 396.00 MB  ::             mean=1.2934 ms, std=0.0622, mid=1.2992, max=1.4128, count=256
+B: 4 I: 512  KV Size: 780.00 MB  ::             mean=1.4065 ms, std=0.1268, mid=1.4132, max=1.6365, count=512
+B: 4 I: 1024  KV Size: 1548.00 MB  ::           mean=1.6319 ms, std=0.2574, mid=1.6345, max=2.0911, count=1024
+B: 8 I: 1  KV Size: 27.00 MB  ::                mean=1.3924 ms, std=0.0000, mid=1.3924, max=1.3924, count=1
+B: 8 I: 2  KV Size: 30.00 MB  ::                mean=1.2400 ms, std=0.0026, mid=1.2400, max=1.2426, count=2
+B: 8 I: 4  KV Size: 36.00 MB  ::                mean=1.2400 ms, std=0.0128, mid=1.2356, max=1.2615, count=4
+B: 8 I: 8  KV Size: 48.00 MB  ::                mean=1.2341 ms, std=0.0045, mid=1.2349, max=1.2396, count=8
+B: 8 I: 16  KV Size: 72.00 MB  ::               mean=1.2431 ms, std=0.0065, mid=1.2443, max=1.2529, count=16
+B: 8 I: 32  KV Size: 120.00 MB  ::              mean=1.2528 ms, std=0.0114, mid=1.2528, max=1.2751, count=32
+B: 8 I: 64  KV Size: 216.00 MB  ::              mean=1.2736 ms, std=0.0262, mid=1.2726, max=1.3259, count=64
+B: 8 I: 128  KV Size: 408.00 MB  ::             mean=1.3542 ms, std=0.2960, mid=1.3255, max=4.6198, count=128
+B: 8 I: 256  KV Size: 792.00 MB  ::             mean=1.4390 ms, std=0.1271, mid=1.4524, max=1.6796, count=256
+B: 8 I: 512  KV Size: 1560.00 MB  ::            mean=1.6722 ms, std=0.2597, mid=1.6821, max=2.1423, count=512
+B: 8 I: 1024  KV Size: 3096.00 MB  ::           mean=2.1299 ms, std=0.5258, mid=2.1355, max=3.0741, count=1024
+B: 16 I: 1  KV Size: 54.00 MB  ::               mean=1.5432 ms, std=0.0000, mid=1.5432, max=1.5432, count=1
+B: 16 I: 2  KV Size: 60.00 MB  ::               mean=1.3603 ms, std=0.0054, mid=1.3603, max=1.3657, count=2
+B: 16 I: 4  KV Size: 72.00 MB  ::               mean=1.3699 ms, std=0.0118, mid=1.3635, max=1.3903, count=4
+B: 16 I: 8  KV Size: 96.00 MB  ::               mean=1.3629 ms, std=0.0062, mid=1.3628, max=1.3721, count=8
+B: 16 I: 16  KV Size: 144.00 MB  ::             mean=1.3763 ms, std=0.0119, mid=1.3733, max=1.3971, count=16
+B: 16 I: 32  KV Size: 240.00 MB  ::             mean=1.3949 ms, std=0.0269, mid=1.3906, max=1.4427, count=32
+B: 16 I: 64  KV Size: 432.00 MB  ::             mean=1.4421 ms, std=0.0542, mid=1.4401, max=1.5440, count=64
+B: 16 I: 128  KV Size: 816.00 MB  ::            mean=1.5719 ms, std=0.2995, mid=1.5503, max=4.6740, count=128
+B: 16 I: 256  KV Size: 1584.00 MB  ::           mean=1.7738 ms, std=0.2516, mid=1.7951, max=2.2372, count=256
+B: 16 I: 512  KV Size: 3120.00 MB  ::           mean=2.2366 ms, std=0.5205, mid=2.2578, max=3.1685, count=512
+B: 16 I: 1024  KV Size: 6192.00 MB  ::                  mean=3.1610 ms, std=1.0658, mid=3.1579, max=5.0831, count=1024
+B: 32 I: 1  KV Size: 108.00 MB  ::              mean=1.6271 ms, std=0.0000, mid=1.6271, max=1.6271, count=1
+B: 32 I: 2  KV Size: 120.00 MB  ::              mean=1.6309 ms, std=0.0095, mid=1.6309, max=1.6404, count=2
+B: 32 I: 4  KV Size: 144.00 MB  ::              mean=1.6366 ms, std=0.0159, mid=1.6398, max=1.6550, count=4
+B: 32 I: 8  KV Size: 192.00 MB  ::              mean=1.6425 ms, std=0.0169, mid=1.6474, max=1.6689, count=8
+B: 32 I: 16  KV Size: 288.00 MB  ::             mean=1.6624 ms, std=0.0250, mid=1.6612, max=1.7158, count=16
+B: 32 I: 32  KV Size: 480.00 MB  ::             mean=1.7122 ms, std=0.0573, mid=1.7092, max=1.8031, count=32
+B: 32 I: 64  KV Size: 864.00 MB  ::             mean=1.8061 ms, std=0.1102, mid=1.8078, max=2.0090, count=64
+B: 32 I: 128  KV Size: 1632.00 MB  ::           mean=2.0398 ms, std=0.3448, mid=2.0129, max=4.8541, count=128
+B: 32 I: 256  KV Size: 3168.00 MB  ::           mean=2.4727 ms, std=0.5105, mid=2.5015, max=3.4396, count=256
+B: 32 I: 512  KV Size: 6240.00 MB  ::           mean=3.4069 ms, std=1.0604, mid=3.4423, max=5.2987, count=512
+B: 32 I: 1024  KV Size:   ::  
+B: 64 I: 1  KV Size: 216.00 MB  ::              mean=1.8655 ms, std=0.0000, mid=1.8655, max=1.8655, count=1
+B: 64 I: 2  KV Size: 240.00 MB  ::              mean=1.8772 ms, std=0.0544, mid=1.8772, max=1.9317, count=2
+B: 64 I: 4  KV Size: 288.00 MB  ::              mean=1.8883 ms, std=0.0386, mid=1.9043, max=1.9217, count=4
+B: 64 I: 8  KV Size: 384.00 MB  ::              mean=1.9138 ms, std=0.0410, mid=1.9253, max=1.9625, count=8
+B: 64 I: 16  KV Size: 576.00 MB  ::             mean=1.9711 ms, std=0.0722, mid=1.9665, max=2.1238, count=16
+B: 64 I: 32  KV Size: 960.00 MB  ::             mean=2.0572 ms, std=0.1157, mid=2.0523, max=2.2370, count=32
+B: 64 I: 64  KV Size: 1728.00 MB  ::            mean=2.2606 ms, std=0.2287, mid=2.2571, max=2.6546, count=64
+B: 64 I: 128  KV Size: 3264.00 MB  ::           mean=2.7097 ms, std=0.5442, mid=2.6802, max=5.3926, count=128
+B: 64 I: 256  KV Size: 6336.00 MB  ::           mean=3.6477 ms, std=1.0638, mid=3.7108, max=5.6240, count=256
+B: 64 I: 512  KV Size:   ::  
+B: 64 I: 1024  KV Size:   ::  
+B: 128 I: 1  KV Size: 432.00 MB  ::             mean=2.3783 ms, std=0.0000, mid=2.3783, max=2.3783, count=1
+B: 128 I: 2  KV Size: 480.00 MB  ::             mean=2.4452 ms, std=0.1097, mid=2.4452, max=2.5550, count=2
+B: 128 I: 4  KV Size: 576.00 MB  ::             mean=2.5250 ms, std=0.1108, mid=2.5777, max=2.6100, count=4
+B: 128 I: 8  KV Size: 768.00 MB  ::             mean=2.5611 ms, std=0.1005, mid=2.5696, max=2.6755, count=8
+B: 128 I: 16  KV Size: 1152.00 MB  ::           mean=2.6682 ms, std=0.1323, mid=2.6652, max=2.8529, count=16
+B: 128 I: 32  KV Size: 1920.00 MB  ::           mean=2.8880 ms, std=0.2503, mid=2.8853, max=3.3071, count=32
+B: 128 I: 64  KV Size: 3456.00 MB  ::           mean=3.3107 ms, std=0.4947, mid=3.3202, max=4.2183, count=64
+B: 128 I: 128  KV Size: 6528.00 MB  ::                  mean=4.2294 ms, std=1.0277, mid=4.2151, max=6.2104, count=128
+B: 128 I: 256  KV Size:   ::  
+B: 128 I: 512  KV Size:   ::  
+B: 128 I: 1024  KV Size:   ::  
+B: 256 I: 1  KV Size: 864.00 MB  ::             mean=4.2789 ms, std=0.0000, mid=4.2789, max=4.2789, count=1
+B: 256 I: 2  KV Size: 960.00 MB  ::             mean=4.3794 ms, std=0.1263, mid=4.3794, max=4.5057, count=2
+B: 256 I: 4  KV Size: 1152.00 MB  ::            mean=4.4607 ms, std=0.1427, mid=4.5045, max=4.6063, count=4
+B: 256 I: 8  KV Size: 1536.00 MB  ::            mean=4.5983 ms, std=0.1980, mid=4.6067, max=4.9257, count=8
+B: 256 I: 16  KV Size: 2304.00 MB  ::           mean=4.7814 ms, std=0.2734, mid=4.7833, max=5.1926, count=16
+B: 256 I: 32  KV Size: 3840.00 MB  ::           mean=5.2616 ms, std=0.5180, mid=5.2277, max=6.0955, count=32
+B: 256 I: 64  KV Size: 6912.00 MB  ::           mean=6.2250 ms, std=1.1554, mid=6.1677, max=10.8993, count=64
+B: 256 I: 128  KV Size:   ::  
+B: 256 I: 256  KV Size:   ::  
+B: 256 I: 512  KV Size:   ::  
+B: 256 I: 1024  KV Size:   ::  
+B: 512 I: 1  KV Size: 1728.00 MB  ::            mean=8.1398 ms, std=0.0000, mid=8.1398, max=8.1398, count=1
+B: 512 I: 2  KV Size: 1920.00 MB  ::            mean=8.3567 ms, std=0.1607, mid=8.3567, max=8.5173, count=2
+B: 512 I: 4  KV Size: 2304.00 MB  ::            mean=8.5226 ms, std=0.2209, mid=8.5971, max=8.7245, count=4
+B: 512 I: 8  KV Size: 3072.00 MB  ::            mean=8.7413 ms, std=0.2575, mid=8.7669, max=9.0297, count=8
+B: 512 I: 16  KV Size: 4608.00 MB  ::           mean=9.2188 ms, std=0.5335, mid=9.2591, max=10.0668, count=16
+B: 512 I: 32  KV Size:   ::  
+B: 512 I: 64  KV Size:   ::  
+B: 512 I: 128  KV Size:   ::  
+B: 512 I: 256  KV Size:   ::  
+B: 512 I: 512  KV Size:   ::  
+B: 512 I: 1024  KV Size:   ::  
+B: 1024 I: 1  KV Size:   ::  
+B: 1024 I: 2  KV Size:   ::  
+B: 1024 I: 4  KV Size:   ::  
+B: 1024 I: 8  KV Size:   ::  
+B: 1024 I: 16  KV Size:   ::  
+B: 1024 I: 32  KV Size:   ::  
+B: 1024 I: 64  KV Size:   ::  
+B: 1024 I: 128  KV Size:   ::  
+B: 1024 I: 256  KV Size:   ::  
+B: 1024 I: 512  KV Size:   ::  
+B: 1024 I: 1024  KV Size:   :: 
