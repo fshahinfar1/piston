@@ -45,12 +45,15 @@ class CircularRange:
         return other < self.end or other >= self.begin
 
     def __add__(self, other: int):
-        self.begin = (self.begin + other) % self.size
-        self.end = (self.end + other) % self.size
-        return self
+        raise Exception('Not implemented')
 
     def __str__(self) -> str:
         return f'[{self.begin}, {self.end}) / {self.size}'
+    
+    def increment(self, other: int):
+        self.begin = (self.begin + other) % self.size
+        self.end = (self.end + other) % self.size
+        return self
 
 
 class OverCommitedSingleStagePipeline(SimplePipeline):
@@ -64,11 +67,6 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
         # Device on which we hold temporary data
         self.spare_memory_device = spare_memory_device
 
-        # For computing forward pass in background
-        self._count_worker = 2
-        self._next_worker = 0
-        self._workers = [Worker() for _ in range(self._count_worker)]
-
         # For moving kv caches
         self._kv_cache_workers = [Worker() for _ in range(num_stages)]
         self._in_flight_copies: Dict[int, List[Promise]] = {i: [] for i in range(num_stages)}
@@ -78,11 +76,13 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
         self.dev = self.replica.stages[0].device
         # How much memory do we have for KV-cache (only use 90% of available memory and leave the rest for hidden state)
         self.available_memory = torch.cuda.memory_allocated(self.dev) * 0.9
-        self.available_memory = 128 * 1024 * 1024
+        self.available_memory = 2 * 1024 * 1024 * 1024
         print('Single Stage Swapping Pipeline: Available memory:', self.available_memory)
 
         self._count_layers = 0
         self._load_layers = CircularRange(0,1,32)
+
+        self._data_movement_measurements = []
 
     def __del__(self):
         self.close()
@@ -92,8 +92,71 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
         Close pipeline and release resources specially worker threads.
         NOTE: without terminating the worker threads the python program does not close properly
         """
-        for w in self._workers + self._kv_cache_workers:
+        for w in self._kv_cache_workers:
             w.die()
+
+    def do_batch_prefill(self, requests: List[Request]) -> Request:
+        replica = self.replica
+        # tokenize
+        prompts = [req.prompt for req in requests]
+        inputs = replica.tokenizer(prompts, return_tensors='pt', padding=True)
+
+        # Create a request to represent the batched request
+        req = Request('')
+        req.next_token_ids = inputs['input_ids']
+        req.attention_mask = inputs['attention_mask']
+        req.generated.append(req.next_token_ids)
+
+        # move the request to GPU to get ready for computation and also get a sense of available memory
+        req.next_token_ids = req.next_token_ids.to(self.dev, non_blocking=False)
+        req.move_hidden_state_to(self.dev)
+        torch.cuda.synchronize(self.dev)
+
+        # Since the cache is not initialized the implementation in this function does not work
+        # self._initial_load_kv_cache(req)
+        cfg = self.replica.config
+        num_layers = getattr(cfg, "num_hidden_layers", getattr(cfg, "n_layer", None))
+        num_head = getattr(cfg, "num_attention_heads", getattr(cfg, "n_head", None))
+        head_dim = getattr(cfg, "head_dim", None) or (cfg.hidden_size // num_head if getattr(cfg, "hidden_size", None) and num_head else None)
+        batch_sz = len(requests)
+        seq_len = req.next_token_ids.shape[1]
+        # print('Sequence len is:', seq_len)
+
+        assert num_layers is not None
+        assert num_head is not None
+        assert head_dim is not None
+        
+        layer_size =  batch_sz * num_head * head_dim * 2 * (seq_len + 1) * 2 # bytes
+        # print('Estimated layer size:', layer_size, '|', batch_sz, num_head, head_dim, seq_len)
+        # each layer has the same size
+        load_layers = int(self.available_memory // layer_size)
+        if load_layers > num_layers:
+            # we are not going to load more than what is available
+            load_layers = num_layers
+        assert load_layers > 1, 'can not load even one layer!!!'
+        # print('Prefill:: Number of layers on device memory:', load_layers, '/', num_layers)
+
+        self._count_layers = num_layers
+        self._load_layers = CircularRange(0, load_layers, num_layers)
+
+     
+        self._active_request[0] = req
+
+        next_token = self.replica.do_one_iteration(req, None)
+        next_token = next_token.cpu()
+
+        # synchronize
+        for p in self._in_flight_copies[0]:
+            p.wait()
+        self._in_flight_copies[0].clear()
+        torch.cuda.synchronize(self.dev)
+
+        req.next_token_ids = next_token
+        req.generated.append(req.next_token_ids)
+
+        # print('Prefill - Req', req.id, 'size:', req.bytes())
+
+        return req
 
     def _do_move_kv_cache_layer(self, stage_index, layer_index):
         """
@@ -102,27 +165,47 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
         NOTE: This function should run in a kv-cache worker thread. So the blocking
         move should be fine.
         """
-        req = self._active_request[stage_index]
-        assert req is not None
+        assert stage_index == 0, 'This is a single stage pipeline'
         stage = self.replica.stages[stage_index]
 
-        assert layer_index == self._load_layers[0]
+        # This asserts makes sure that we are moving layers out of the device in order
+        assert layer_index == self._load_layers[0], f'{layer_index} != {self._load_layers[0]} ({self._load_layers})'
 
+        req = self._active_request[stage_index]
+        assert req is not None
+
+        num_layers = len(req.cache.layers)
+
+        start = time.time()
         with torch.Stream(device=stage.device) as s_cuda:
             # move this layer of KV cache to the spare device in parallel
-            dev_map = [None] * len(req.cache.layers)
-            dev_map[self._load_layers[0]] = self.spare_memory_device
+            offload_layer_index = self._load_layers[0]
+            assert offload_layer_index < num_layers
+            dev_map = [None] * num_layers
+            dev_map[offload_layer_index] = self.spare_memory_device
             req.move_to(dev_map, non_blocking=False)
-            torch.cuda.synchronize(stage.device)
+            s_cuda.synchronize()
+            
+            # self._load_layers.begin = (offload_layer_index + 1) % num_layers
 
+            prefetch_layer_index = self._load_layers[1] 
+            assert prefetch_layer_index < num_layers
             # prefetch the layer of KV cache that we need in near future
-            dev_map = [None] * len(req.cache.layers)
-            dev_map[self._load_layers[1]] = stage.device
+            dev_map = [None] * num_layers
+            dev_map[prefetch_layer_index] = stage.device
             req.move_to(dev_map, non_blocking=False)
-            torch.cuda.synchronize(stage.device)
+            s_cuda.synchronize()
+
+            # self._load_layers.end = (prefetch_layer_index + 1) % num_layers
+        
+        dur = time.time() - start
+        S = lambda x: x.numel() * x.element_size()
+        K = lambda l: S(l.keys) + S(l.values)
+        sz = K(req.cache.layers[offload_layer_index])
+        self._data_movement_measurements.append((dur, offload_layer_index, prefetch_layer_index, sz))
 
         # print('in/out:', self._load_layers)
-        self._load_layers + 1
+        self._load_layers.increment(1)
 
     def _move_kv_cache_layer(self, stage_index, layer_index):
         """
@@ -159,6 +242,7 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
             # we are not going to load more than what is available
             load_layers = num_layers
         assert load_layers > 1, 'can not load even one layer!!!'
+        print('Number of layers on device memory:', load_layers, '/', num_layers)
 
         dev_map = [None] * num_layers
         for i in range(load_layers):
@@ -167,7 +251,6 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
 
         self._count_layers = num_layers
         self._load_layers = CircularRange(0, load_layers, num_layers)
-        print('Number of layers on device memory:', load_layers, '/', num_layers)
     
     def _forward(self, stage: SubModel, req: Request) -> None:
         """
@@ -321,5 +404,11 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
 
             # free memory of requests
             print('Req', req.id, 'size:', req.bytes())
+
+            for m in self._data_movement_measurements:
+                print(round(m[0] * 1000, 2), 'ms', '    ', m[-1], 'B')
+            print('-----')
+
+            self._data_movement_measurements.clear()
             req.free()
             # torch.cuda.empty_cache()

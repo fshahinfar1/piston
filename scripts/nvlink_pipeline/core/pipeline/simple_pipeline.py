@@ -38,6 +38,32 @@ class SimplePipeline:
             final_text = self.replica.tokenizer.batch_decode(generated,
                                                     skip_special_tokens=True)
             print(final_text)
+    
+
+    def do_batch_prefill(self, requests: List[Request]) -> Request:
+        replica = self.replica
+        # tokenize
+        prompts = [req.prompt for req in requests]
+        inputs = replica.tokenizer(prompts, return_tensors='pt', padding=True)
+
+        # Create a request to represent the batched request
+        req = Request('')
+        req.next_token_ids = inputs['input_ids']
+        req.attention_mask = inputs['attention_mask']
+        req.generated.append(req.next_token_ids)
+
+        next_token = replica.do_one_iteration(req)
+        next_token = next_token.cpu()
+
+        req.next_token_ids = next_token
+        req.generated.append(req.next_token_ids)
+
+        # print(len(requests))
+        # for r in requests:
+        #     print(r.prompt)
+        # print('Req', req.id, 'size:', req.bytes())
+
+        return req
 
     def add_request(self, req):
         self.rx_queue.append(req)
@@ -63,7 +89,7 @@ class SimplePipeline:
 
             # NOTE: do prefill on a list of Request to have the inputs and
             # embedding padded correctly for batch processing
-            batched_req = do_batch_prefill(batch_requests, self.replica)
+            batched_req = self.do_batch_prefill(batch_requests)
             count = len(batched_req.cache.layers)
             dev_map = [DEV_CPU] * count
             batched_req.move_to(dev_map, non_blocking=True)

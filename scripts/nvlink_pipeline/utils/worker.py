@@ -63,6 +63,8 @@ class Worker:
                 fn()
             except Exception as e:
                 error = e
+                print('Worker: saw an exception :-(')
+                print(e)
             # print('Worker', self.id, ':', fn, error)
 
             promise.deliver(error)

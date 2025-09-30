@@ -76,8 +76,14 @@ def main():
     for req in load_pile_of_request(PILE_SIZE):
         pipeline.add_request(req)
     
-    # pipeline.prepare_run_queue()
-    pipeline.prepare_run_queue_batched()
+    try:
+        # pipeline.prepare_run_queue()
+        pipeline.prepare_run_queue_batched()
+    except Exception as e:
+        pipeline.close()
+        raise(e)
+
+    print('Prefill finished ---------')
 
     start_time = time.time()
 
