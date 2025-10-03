@@ -28,6 +28,9 @@ def main():
 
     main_dev = DEV_GPU_[0]
     other_dev = DEV_CPU_
+    # other_dev = DEV_GPU_[1]
+
+    print('Moving:', args.size, 'GB', f'tensor back and forth {main_dev} <--> {other_dev}')
 
     tensor_size = args.size * GB
     assert tensor_size < 64 * GB * 0.98
