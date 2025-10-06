@@ -8,6 +8,10 @@ class Promise:
         self.done = threading.Semaphore(value=0)
         self.error = None
 
+        self._lock = threading.Semaphore(value=1)
+        self._under_process = False
+        self._cancel = False
+
     def deliver(self, error=None):
         # self.done = True
         self.done.release()
@@ -19,6 +23,22 @@ class Promise:
         self.done.acquire()
         if self.error is not None:
             raise self.error
+    
+    def mark_under_process(self) -> bool:
+        if not self._cancel:
+            with self._lock:
+                if not self._cancel:
+                    self._under_process = True
+                    return True
+        return False
+    
+    def cancel(self) -> bool:
+        if not self._under_process:
+            with self._lock:
+                if not self._under_process:
+                    self._cancel = True
+                    return True
+        return False
 
 
 class Worker:
@@ -56,6 +76,10 @@ class Worker:
 
             self.busy = True
             fn, promise = self.tasks.get()
+
+            if not promise.mark_under_process():
+                # the work was canceled
+                continue
 
             # print('Worker', self.id, ':','got task')
             error = None
