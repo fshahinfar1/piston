@@ -27,8 +27,8 @@ def main():
     args = parse_args()
 
     main_dev = DEV_GPU_[0]
-    other_dev = DEV_CPU_
-    # other_dev = DEV_GPU_[1]
+    # other_dev = DEV_CPU_
+    other_dev = DEV_GPU_[1]
 
     print('Moving:', args.size, 'GB', f'tensor back and forth {main_dev} <--> {other_dev}')
 

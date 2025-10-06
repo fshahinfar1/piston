@@ -11,8 +11,8 @@ from transformers.masking_utils import (
         create_sliding_window_causal_mask
         )
 
-from constants import LOCAL_FILE_ONLY
-from utils.observer import Observable
+from piston.constants import LOCAL_FILE_ONLY
+from piston.utils.observer import Observable
 
 
 class SubModel(Observable):

@@ -1,8 +1,8 @@
 from typing import *
 import torch
-from core.entity import Request
+from .entity import Request
 from .entities import Replica
-from constants import DEV_CPU
+from piston.constants import DEV_CPU
 
 
 def do_prefill(req, replica):

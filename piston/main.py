@@ -1,17 +1,19 @@
 from typing import *
+import os
 import time
 import sys
 
 import argparse
 
-from core.entity import Request
-from core.pipeline import SimplePipeline, SwappingPipeline, OverCommitedSingleStagePipeline
-from constants import *
+from piston.core.entity import Request
+from piston.core.pipeline import SimplePipeline, SwappingPipeline, OverCommitedSingleStagePipeline
+from piston.constants import *
 
 
 def load_pile_of_request(pile_size):
     prompts = []
-    with open('prompts.txt', 'r') as f:
+    current_dir = os.path.dirname(__file__)
+    with open(os.path.join(current_dir, 'prompts.txt'), 'r') as f:
         prompts = [l for l in f.readlines() if not l.startswith('#')]
     
     num_prompts = len(prompts)
@@ -39,8 +41,8 @@ def parse_args():
 
 
 def main():
-    model_name = 'microsoft/Phi-3.5-mini-instruct'
-    # model_name = '/leonardo_work/EUHPC_D17_077/fshahinf/dequantized/gpt-oss-20b-bf16'
+    # model_name = 'microsoft/Phi-3.5-mini-instruct'
+    model_name = '/leonardo_work/EUHPC_D17_077/fshahinf/dequantized/gpt-oss-20b-bf16'
 
     args = parse_args()
     MODE = args.pipeline
@@ -49,9 +51,6 @@ def main():
     PILE_SIZE = args.num_requests
     VERBOSE=False
     num_stages = args.num_stages
-
-    # SPARE_MEMORY = DEV_GPU_[2]
-    SPARE_MEMORY = DEV_CPU  # offload to CPU
 
     assert num_stages == 1 or num_stages == 2
 

@@ -6,19 +6,16 @@ Decode phase of LLM inference is bottelneck by available vRAM. In this project
 we explore the possiblity of overcomming the barrier through a careful
 synchronization of compute and data movement ballet.
 
+> python3 -m piston.main -h
 ```
-.
-├── docs
-│   └── exps  <-- some experiments, data, and figures
-├── README.md
-├── scripts
-│   ├── compression_across_layers  <-- measureing standard compression techniques on model layers
-│   ├── install.sh
-│   ├── layers_exec_time <-- measure execution time of layers
-│   ├── model_compression_ratio <-- compression investigated
-│   ├── nvlink_pipeline <-- A inference system based on transformer API that does swapping
-│   ├── nvlink_speed  <-- measure NVLink speed
-│   ├── on_gpu_compression <-- compression tests
-├── src
-```
+usage: main.py [-h] [--batch BATCH] [--num-requests NUM_REQUESTS] [--pipeline PIPELINE] [--iters ITERS] [--num-stages NUM_STAGES]
 
+options:
+  -h, --help            show this help message and exit
+  --batch BATCH         number of request in a batch
+  --num-requests NUM_REQUESTS
+                        total number of requests to process
+  --pipeline PIPELINE   which type of pipeline use for requests processing (simple, swapping)
+  --iters ITERS         number of tokens to generate
+  --num-stages NUM_STAGES
+```

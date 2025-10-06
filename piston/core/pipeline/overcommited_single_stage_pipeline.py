@@ -8,10 +8,10 @@ from transformers.masking_utils import (
         create_sliding_window_causal_mask
         )
 
-from core.pipeline.simple_pipeline import SimplePipeline
-from core.entity.request import Request
-from core.entities import SubModel
-from utils.worker import Worker, Promise
+from piston.core.pipeline.simple_pipeline import SimplePipeline
+from piston.core.entity.request import Request
+from piston.core.entities import SubModel
+from piston.utils.worker import Worker, Promise
 
 
 class CircularRange:
@@ -75,13 +75,14 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
 
         self.dev = self.replica.stages[0].device
         # How much memory do we have for KV-cache (only use 90% of available memory and leave the rest for hidden state)
-        self.available_memory = torch.cuda.memory_allocated(self.dev) * 0.9
-        self.available_memory = 2 * 1024 * 1024 * 1024
+        # self.available_memory = torch.cuda.memory_allocated(self.dev) * 0.9
+        self.available_memory = 7 * 1024 * 1024 * 1024
         print('Single Stage Swapping Pipeline: Available memory:', self.available_memory)
 
         self._count_layers = 0
         self._load_layers = CircularRange(0,1,32)
 
+        self._report_movement_measurements = False
         self._data_movement_measurements = []
 
     def __del__(self):
@@ -184,7 +185,7 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
             dev_map = [None] * num_layers
             dev_map[offload_layer_index] = self.spare_memory_device
             req.move_to(dev_map, non_blocking=False)
-            s_cuda.synchronize()
+            # s_cuda.synchronize()
             
             # self._load_layers.begin = (offload_layer_index + 1) % num_layers
 
@@ -198,11 +199,12 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
 
             # self._load_layers.end = (prefetch_layer_index + 1) % num_layers
         
-        dur = time.time() - start
-        S = lambda x: x.numel() * x.element_size()
-        K = lambda l: S(l.keys) + S(l.values)
-        sz = K(req.cache.layers[offload_layer_index])
-        self._data_movement_measurements.append((dur, offload_layer_index, prefetch_layer_index, sz))
+        if self._report_movement_measurements:
+            dur = time.time() - start
+            S = lambda x: x.numel() * x.element_size()
+            K = lambda l: S(l.keys) + S(l.values)
+            sz = K(req.cache.layers[offload_layer_index])
+            self._data_movement_measurements.append((dur, offload_layer_index, prefetch_layer_index, sz))
 
         # print('in/out:', self._load_layers)
         self._load_layers.increment(1)
@@ -405,10 +407,11 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
             # free memory of requests
             print('Req', req.id, 'size:', req.bytes())
 
-            for m in self._data_movement_measurements:
-                print(round(m[0] * 1000, 2), 'ms', '    ', m[-1], 'B')
-            print('-----')
+            if self._report_movement_measurements:
+                for m in self._data_movement_measurements:
+                    print(round(m[0] * 1000, 2), 'ms', '    ', m[-1], 'B')
+                print('-----')
 
-            self._data_movement_measurements.clear()
+                self._data_movement_measurements.clear()
             req.free()
             # torch.cuda.empty_cache()
