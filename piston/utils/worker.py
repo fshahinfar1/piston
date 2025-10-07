@@ -1,6 +1,9 @@
 import os
 import threading
+# import multiprocessing
 import queue
+
+# from .isolated_worker_core import isolated_worker_main
 
 
 class Promise:
@@ -11,6 +14,10 @@ class Promise:
         self._lock = threading.Semaphore(value=1)
         self._under_process = False
         self._cancel = False
+        self._wait_also_check = []
+    
+    def also_wait(self, fn):
+        self._wait_also_check.append(fn)
 
     def deliver(self, error=None):
         # self.done = True
@@ -23,6 +30,9 @@ class Promise:
         self.done.acquire()
         if self.error is not None:
             raise self.error
+
+        for fn in self._wait_also_check:
+            fn()
     
     def mark_under_process(self) -> bool:
         if not self._cancel:
@@ -115,3 +125,42 @@ class Worker:
         self.running = False
         # interrupt the worker if its blocked on task arrival
         self.task_arrival_promise.deliver()
+
+# class IsolatedWorker:
+#     counter = 0
+
+#     def __init__(self):
+#         parent_end, child_end = multiprocessing.Pipe()
+#         self.ctrl_pipe = parent_end
+
+#         self._proc = multiprocessing.Process(target=isolated_worker_main, args=(child_end,))
+#         self._id = IsolatedWorker.counter
+#         IsolatedWorker.counter += 1
+
+#         self.tasks = queue.Queue()
+
+#         self.busy = False
+#         self.running = False
+#         self._proc.start()
+
+#     def add_task(self, fn, *args, **kwargs):
+#         """
+#         Add a task to queue. Worker will invoke function `fn` with given
+#         arguments.
+#         Returns a promise to check if the task is finished or not.
+#         """
+#         promise = Promise()
+#         wrapped = lambda: fn(*args, **kwargs)
+#         self.tasks.put((wrapped, promise))
+
+#         # wake up the worker if it is waiting for a new task
+#         self.task_arrival_promise.deliver()
+
+#         return promise
+    
+#     def die(self):
+#         """
+#         Stop the worker
+#         """
+#         pass
+ 
