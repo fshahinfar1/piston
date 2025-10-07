@@ -1,7 +1,7 @@
 from typing import *
 import time
 import torch
-from queue import Queue
+from queue import deque
 
 # TODO: FIXME: I have changed the library to expose this
 from transformers.masking_utils import (
@@ -65,8 +65,8 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
         # Device on which we hold temporary data
         self.spare_memory_device = spare_memory_device
 
-        # For moving kv caches
-        self._in_flight_copies: Queue[Tuple[Any, int]] = Queue()
+        # Used to synchronize with in flight kv caches
+        self._in_flight_copies: deque[Tuple[Any, int]] = deque()
 
         self._active_request: Optional[torch.Tensor] = None
 
@@ -82,16 +82,13 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
         self._data_movement_measurements = []
 
         # skipping moving if we have this many layers ahead
-        self._layers_a_head = 4
+        self._layers_a_head = 8
 
-        self._count_stream = self._layers_a_head # A100 has 2 copy engines
-        self._next_stream = 0
-        self._streams = tuple(torch.cuda.Stream() for i in range(self._count_stream))
+        self._count_stream = 4
+        self._streams = [torch.cuda.Stream() for i in range(self._count_stream)]
+        self._compute_stream = torch.cuda.Stream()
 
         self._is_last_iter = False
-
-    def close(self) -> None:
-        pass
 
     def _move_kv_cache_layer(self, layer_index):
         """
@@ -103,12 +100,14 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
             # print('skip: @', layer_index, f'({prefetch_layer_index})')
             return
 
-        # if self._is_last_iter and prefetch_layer_index < layer_index:
-        #     # This is the last iteration, we do not need to move more layers in or out
-        #     return
+        if self._is_last_iter and prefetch_layer_index < layer_index:
+            # This is the last iteration, we do not need to move more layers in or out
+            return
 
         # select a stream
-        stream = self._streams[self._next_stream]
+        stream1 = self._streams[self._next_stream]
+        self._next_stream = (self._next_stream + 1) % self._count_stream
+        stream2 = self._streams[self._next_stream]
         self._next_stream = (self._next_stream + 1) % self._count_stream
 
         req = self._active_request
@@ -120,13 +119,14 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
         offload_layer_index = layer_index
         assert offload_layer_index < num_layers
         assert prefetch_layer_index < num_layers
-        with torch.cuda.stream(stream):
+        with torch.cuda.stream(stream1):
             # move this layer of KV cache to the spare device. First update the
             # ring point, so that we no this layer is not available
             # self._load_layers.begin = (self._load_layers.begin + 1) % self._load_layers.size
             self._load_layers[offload_layer_index] = False
             req.move_single_layer_to(offload_layer_index, self.spare_memory_device, non_blocking=True)
 
+        with torch.cuda.stream(stream2):
             # prefetch the layer of KV cache that we need in near future. We
             # must update the end pointer of the ring after the copy is
             # finished. Otherwise we might work on garbage data
@@ -134,7 +134,9 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
             # self._load_layers.end = (prefetch_layer_index + 1) % num_layers
 
         if self._report_movement_measurements:
-            stream.synchronize()
+            stream1.synchronize()
+            stream2.synchronize()
+            print('sync event')
             dur = time.time() - start
             S = lambda x: x.numel() * x.element_size()
             K = lambda l: S(l.keys) + S(l.values)
@@ -143,32 +145,27 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
 
         # print('in/out:', self._load_layers)
 
-        t = stream.record_event() # synchronize on current event
-        self._in_flight_copies.put((t, prefetch_layer_index))
+        t = stream2.record_event() # synchronize on current event
+        self._in_flight_copies.append((t, prefetch_layer_index))
 
     def _initial_load_kv_cache(self, req: Request) -> None:
-        keys = req.cache.layers[0].keys
-        vals = req.cache.layers[0].values
+        # TODO: instead of statically allocate layers on the GPU, check their
+        # size after each token is added and then move the layers that will not
+        # fit to the spare memory
 
         # [batch_size, num_heads, seq_len, head_dim]
-
-        batch_sz, num_head, seq_len, head_dim = keys.shape
-        assert keys.shape == vals.shape, f'{keys.shape} != {vals.shape}'
+        batch_sz, num_head, seq_len, head_dim = req.cache.layers[0].keys.shape
 
         # Statically reserve memory for KV cache
         # x2 bytes for float16
         # x2 for key and value
         layer_size =  batch_sz * num_head * head_dim * 2 * (self.max_length + seq_len) * 2 # bytes
-
         num_layers = len(req.cache.layers)
-
-        # each layer has the same size
-        load_layers = int(self.available_memory // layer_size)
-        if load_layers > num_layers:
-            # we are not going to load more than what is available
-            load_layers = num_layers
+        # each layer has the same size, how many layers will fit?
+        load_layers = min(int(self.available_memory // layer_size), num_layers)
         assert load_layers > 1, 'can not load even one layer!!!'
         print('Number of layers on device memory:', load_layers, '/', num_layers)
+
 
         # Move what is possible to main device and others to the spare memory
         dev_map = [None] * num_layers
@@ -178,9 +175,46 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
             dev_map[i] = self.spare_memory_device
         req.move_to(dev_map, non_blocking=True)
 
+        self._layers_a_head = min(8, load_layers)
         self._count_layers = num_layers
         self._load_layers = RangeTracker(num_layers)
         self._load_layers.set_range(0, load_layers, True)
+    
+    def _stall_if_needed_for_layers(self, k) -> None:
+        # print('-- layer:', k)
+        # we should block until the KV cache of the layer is loaded
+        while k not in self._load_layers:
+            if self._in_flight_copies:
+                event, layer_index = self._in_flight_copies.popleft()
+                if not event.query():
+                    # instead of waiting for each individual copy to finish,
+                    # wait for a few to finish :) . Reducing the number of
+                    # synchronize calls
+                    check = min(0, len(self._in_flight_copies))
+                    next = (layer_index + 1) % self._count_layers
+                    tmp = []
+                    for _ in range(check):
+                        item = self._in_flight_copies[0]
+                        if item[1] == next:
+                            # wait on this event instead
+                            tmp.append(layer_index) # remember to set this layers flag
+                            event, layer_index = self._in_flight_copies.popleft()
+                            next = (layer_index + 1) % self._count_layers
+                            continue
+                        else:
+                            # stop, looking, there is disconnect
+                            break
+                    event.synchronize()
+                    # print('called synch')
+                    for index in tmp:
+                        self._load_layers[index] = True
+                self._load_layers[layer_index] = True
+            else:
+                # This is an error
+                print('error: no in flight copies but the layers are not found')
+                torch.cuda.synchronize(self.replica.stages[0].device)
+                time.sleep(1)
+                print('warning: waiting for', k, self._load_layers)
     
     def _forward(self, stage: SubModel, req: Request) -> None:
         """
@@ -233,19 +267,7 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
             position_embeddings = stage.rotary_emb(hidden_states, position_ids)
 
         for k, decoder_layer in enumerate(stage.layers):
-            # print('-- layer:', k)
-            # we should block until the KV cache of the layer is loaded
-            while k not in self._load_layers:
-                if not self._in_flight_copies.empty():
-                    event, layer_index = self._in_flight_copies.get()
-                    if not event.query():
-                        event.synchronize()
-                    self._load_layers[layer_index] = True
-                else:
-                    print('error: no in flight copies but the layers are not found')
-                    torch.cuda.synchronize(stage.device)
-                    time.sleep(1)
-                    print('warning: waiting for', k, self._load_layers)
+            self._stall_if_needed_for_layers(k)
             
             hidden_states = decoder_layer(
                 hidden_states,
@@ -273,31 +295,31 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
     
     def _do_one_iteration(self, req: Request, stats: Optional[Any]) -> torch.Tensor:
         with torch.no_grad():
-            req.hidden_states = req.next_token_ids
-            cache = req.cache
+            with torch.cuda.stream(self._compute_stream):
+                req.hidden_states = req.next_token_ids
+                cache = req.cache
 
-            start = time.time()
-            # there is only one stage, so ...
-            self._forward(self.replica.stages[0], req)
-            if stats:
-                # wait until all computation on this device is over
-                torch.cuda.synchronize(self.replica.stages[0].device)
-                duration = (time.time() - start) * 1000
-                stats.stage_exec_times[0].append(duration)
+                start = time.time()
+                # there is only one stage, so ...
+                self._forward(self.replica.stages[0], req)
+                if stats:
+                    # wait until all computation on this device is over
+                    torch.cuda.synchronize(self.replica.stages[0].device)
+                    duration = (time.time() - start) * 1000
+                    stats.stage_exec_times[0].append(duration)
 
-        # Select the most probable token as next toekn
-        logits = self.replica.lm_head(req.hidden_states)
-        logits = logits.float()
-        next_token_logits = logits[:, -1, :]
-        next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
+                # Select the most probable token as next toekn
+                logits = self.replica.lm_head(req.hidden_states)
+                logits = logits.float()
+                next_token_logits = logits[:, -1, :]
+                next_token = torch.argmax(next_token_logits, dim=-1, keepdim=True)
 
-        # Update attention to use the new token
-        mask = req.attention_mask
-        mask = torch.cat([mask, mask.new_ones((mask.size(0), 1))], dim=-1)
-        req.attention_mask = mask 
+                # Update attention to use the new token
+                mask = req.attention_mask
+                mask = torch.cat([mask, mask.new_ones((mask.size(0), 1))], dim=-1)
+                req.attention_mask = mask 
 
         req.clear_hidden_states()
-
         return next_token
 
     def process_requests(self)-> None:
@@ -314,7 +336,6 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
 
         while self.run_queue:
             req = self.run_queue.pop()
-
             self._active_request = req
 
             # Load as much as KV cache as we can
@@ -326,7 +347,7 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
             # stat = ExecutionStatistics(self.num_stages)
             stat = None
             for i in range(self.max_length):
-                self._is_last_iter =  i == self.max_length - 1
+                self._is_last_iter =  (i == (self.max_length - 1))
                 x = self._do_one_iteration(req, stat)
                 req.generated.append(x)
                 req.next_token_ids = x
@@ -336,8 +357,7 @@ class OverCommitedSingleStagePipeline(SimplePipeline):
 
             # make sure do not have anything in flight
             # assert self._in_flight_copies.empty()
-            while not self._in_flight_copies.empty():
-                self._in_flight_copies.get()
+            self._in_flight_copies.clear()
 
             # free memory of requests
             print('Req', req.id, 'size:', req.bytes())
