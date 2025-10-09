@@ -4,10 +4,10 @@
 #SBATCH --partition=boost_usr_prod      # or your assigned partition
 #SBATCH --nodes=1                      # one node to ensure GPUs are on same physical machine
 #SBATCH --ntasks=1                     # one task
-#SBATCH --cpus-per-task=8              # CPU cores allocated; tune as needed
-#SBATCH --gres=gpu:1                   # request two GPUs
+#SBATCH --cpus-per-task=4              # CPU cores allocated; tune as needed
+#SBATCH --gres=gpu:4                   # request two GPUs
 #SBATCH --mem=48G                      # request RAM, change xx as needed
-#SBATCH --time=00:10:00                # e.g. ten minutes of runtime
+#SBATCH --time=00:30:00                # e.g. ten minutes of runtime
 #SBATCH --output=output/stdout.txt
 #SBATCH --error=output/stderr.txt
 
@@ -34,7 +34,8 @@ source $VENV_DIR/bin/activate
 nvidia-smi
 nvidia-smi topo -m
 
-COMMAND="python ./nvlink_speed.py 32"
+# COMMAND="python ./nvlink_speed.py 32"
+COMMAND="python ./nvlink_broadcast_speed.py 32 4"
 
 if [ $NSYS = true ]; then
   nsys profile \
