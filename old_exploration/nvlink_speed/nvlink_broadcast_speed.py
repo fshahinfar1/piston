@@ -24,17 +24,26 @@ def main():
     args = parse_args()
     devs = [torch.device(f'cuda:{i}') for i in range(args.gpus)]
 
-    tensor_size = args.size * GB
+    assume_kv = True
+    sub_tensors = 1
+    if assume_kv:
+        # send two separate tensors
+        sub_tensors = 2
+
+
+    tensor_size = args.size * GB / sub_tensors
+
     numel = int(tensor_size // 2) # sending float16 which is 2 bytes
 
     main_dev = devs[0]
     other_devs = devs[1:]
     print(f'Moving {args.size} GB from {main_dev} to each of {other_devs} concurrently')
 
-    main_tensor = torch.rand(numel, dtype=torch.float16, device=main_dev)
     buffers = []
+
+    main_tensor = [torch.rand(numel, dtype=torch.float16, device=main_dev) for _ in range(sub_tensors)]
     for d in other_devs:
-        b = torch.empty(numel, dtype=torch.float16, device=d)
+        b = [torch.empty(numel, dtype=torch.float16, device=d) for _ in range(sub_tensors)]
         buffers.append(b)
     
     # time spans are in seconds
@@ -53,7 +62,9 @@ def main():
         src = main_tensor
         for stream, dst in zip(streams, buffers):
             with torch.cuda.stream(stream):
-                dst.copy_(src, non_blocking=True)
+                # s and d are sub tensors and buffers :)
+                for s, d in zip(src, dst):
+                    d.copy_(s, non_blocking=True)
         
         torch.cuda.synchronize()
 
@@ -66,7 +77,7 @@ def main():
     mean, std, mid, _max, count = stats([t * 1000 for t in time_measurements])
     print(f'Mean: {mean:.3f} ms, Std: {std:.3f}, Median: {mid:.3f} ms , Max: {_max:.3f} ms, Count: {count}')
 
-    throughput = [(args.gpus - 1) * (tensor_size / GB) / (t) for t in time_measurements] # GB/s
+    throughput = [(args.gpus - 1) * (sub_tensors * tensor_size / GB) / (t) for t in time_measurements] # GB/s
     mean, std, mid, _max, count = stats(throughput)
     print(f'Mean: {mean:.3f} GB/s, Std: {std:.3f}, Median: {mid:.3f} GB/s , Max: {_max:.3f} GB/s, Count: {count}')
 
