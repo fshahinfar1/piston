@@ -9,6 +9,7 @@ import queue
 class Promise:
     def __init__(self):
         self.done = threading.Semaphore(value=0)
+        self.done_flag = False
         self.error = None
 
         self._lock = threading.Semaphore(value=1)
@@ -18,16 +19,21 @@ class Promise:
     
     def also_wait(self, fn):
         self._wait_also_check.append(fn)
+    
+    def poke(self):
+        self.done.release()
 
     def deliver(self, error=None):
         # self.done = True
+        self.done_flag = True
         self.done.release()
         self.error = error
     
     def wait(self):
         # while not self.done:
         #     continue
-        self.done.acquire()
+        if not self.done_flag:
+            self.done.acquire()
         if self.error is not None:
             raise self.error
 
@@ -114,9 +120,19 @@ class Worker:
         self.tasks.put((wrapped, promise))
 
         # wake up the worker if it is waiting for a new task
-        self.task_arrival_promise.deliver()
+        self.task_arrival_promise.poke()
 
         return promise
+    
+    def add_task_no_notif(self, fn, *args, **kwargs):
+        promise = Promise()
+        wrapped = lambda: fn(*args, **kwargs)
+        self.tasks.put((wrapped, promise))
+        return promise
+    
+    def notify_of_task(self):
+        # wake up the worker if it is waiting for a new task
+        self.task_arrival_promise.poke()
     
     def die(self):
         """
@@ -124,7 +140,7 @@ class Worker:
         """
         self.running = False
         # interrupt the worker if its blocked on task arrival
-        self.task_arrival_promise.deliver()
+        self.task_arrival_promise.poke()
 
 # class IsolatedWorker:
 #     counter = 0

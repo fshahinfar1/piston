@@ -2,8 +2,8 @@ import torch
 
 GB = 1024 ** 3
 MAX_LENGTH = 1024
-NUM_DEVICES = 2
-NUM_STAGES = 2
+NUM_DEVICES = 4
+NUM_STAGES = 4
 DEV_GPU_ = [torch.device(f'cuda:{i % NUM_DEVICES}') for i in range(NUM_STAGES)]
 DEV_CPU = torch.device('cpu')
 

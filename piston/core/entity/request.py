@@ -65,13 +65,15 @@ class Request:
             cache.layers[i].keys = cache.layers[i].keys.to(dev, non_blocking=non_blocking)
             cache.layers[i].values = cache.layers[i].values.to(dev, non_blocking=non_blocking)
     
-    def move_single_layer_to(self, layer_index, dev, non_blocking=False) -> None:
+    def move_single_layer_to(self, layer_index, dev, s1, s2, non_blocking=False) -> None:
         cache = self.cache
         if layer_index > len(self.cache.layers):
             return
         i = layer_index
-        cache.layers[i].keys = cache.layers[i].keys.to(dev, non_blocking=non_blocking)
-        cache.layers[i].values = cache.layers[i].values.to(dev, non_blocking=non_blocking)
+        with s1:
+            cache.layers[i].keys = cache.layers[i].keys.to(dev, non_blocking=non_blocking)
+        with s2:
+            cache.layers[i].values = cache.layers[i].values.to(dev, non_blocking=non_blocking)
 
 
     def pre_move_to(self, pre_move_key, device_map, non_blocking=False) -> None:
@@ -131,6 +133,7 @@ class Request:
         self.cache = None
         self.generated.clear()
         self.next_token_ids = None
+        self.attention_mask = None
         self.clear_hidden_states()
 
     def clear_hidden_states(self):
