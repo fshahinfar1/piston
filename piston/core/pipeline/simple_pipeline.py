@@ -4,7 +4,7 @@ import torch
 from transformers.generation.utils import DynamicCache
 
 from piston.core.entity import Request
-from piston.core.entities import Replica
+from piston.core.entity.replica import Replica
 from piston.core.statistics import ExecutionStatistics
 from piston.core.prefill_decode import do_prefill, do_batch_prefill
 from piston.utils.memman import get_batch_size, get_max_num_tokens

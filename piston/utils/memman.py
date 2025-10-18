@@ -1,6 +1,6 @@
 from typing import *
 import torch
-from piston.core.entities import Replica
+from piston.core.entity.replica import Replica
 
 
 def _get_available_memory(available_memory: Optional[int]) -> int:

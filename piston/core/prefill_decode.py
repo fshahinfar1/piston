@@ -1,7 +1,7 @@
 from typing import *
 import torch
 from .entity import Request
-from .entities import Replica
+from .entity.replica import Replica
 from piston.constants import DEV_CPU
 
 

@@ -23,3 +23,6 @@ LOCAL_FILE_ONLY=True
 
 # MODE = 'simple'
 # MODE = 'swapping'
+
+# Use multiprocessing
+MPROC_ENABLED=True

@@ -42,6 +42,8 @@ def parse_args():
 
 
 def main():
+    torch.multiprocessing.set_start_method('spawn')
+
     model_name = 'microsoft/Phi-3.5-mini-instruct'
     # model_name = '/leonardo_work/EUHPC_D17_077/fshahinf/dequantized/gpt-oss-20b-bf16'
 
