@@ -1,22 +1,25 @@
 from typing import *
-import time
 import torch
-from transformers.generation.utils import DynamicCache
 
 from piston.core.entity import Request
 from piston.core.entity.replica import Replica
+from piston.core.entity.mproc.mproc_replica import MPROC_Replica
 from piston.core.statistics import ExecutionStatistics
-from piston.core.prefill_decode import do_prefill, do_batch_prefill
-from piston.utils.memman import get_batch_size, get_max_num_tokens
+from piston.core.prefill_decode import do_prefill
 from piston.constants import *
 
+from piston.core.entity.mproc.mproc_submodel import COMMAND_EXTRACT_KV_CACHE, COMMAND_EXTRACT_KV_CACHE_ACK, COMMAND_TERMINATE
 
 class SimplePipeline:
     def __init__(self, model_name: str, num_stages: int, device_list: List,
                     max_length=32, batch_size: int=1, do_print=False):
         self.num_stages = num_stages
         self.device_list = device_list
-        self.replica = Replica(model_name, num_stages=num_stages, device_list=device_list)
+        self.mproc_enabled = MPROC_ENABLED
+        if self.mproc_enabled:
+            self.replica = MPROC_Replica(model_name, num_stages, device_list)
+        else:
+            self.replica = Replica(model_name, num_stages, device_list)
         # self.available_memory = available_memory
         self.max_length = max_length
         # self.batch_size = get_batch_size(self.replica, max_length, self.available_memory)
@@ -29,6 +32,10 @@ class SimplePipeline:
         self.do_print = do_print
 
     def close(self) -> None:
+        if self.mproc_enabled:
+            for pipe in self.replica.ctrl_pipe:
+                pipe.send((COMMAND_TERMINATE, None))
+                pipe.close()
         return
 
     def print_output(self, req: Request) -> None:
@@ -52,11 +59,26 @@ class SimplePipeline:
         req.attention_mask = inputs['attention_mask']
         req.generated.append(req.next_token_ids)
 
+        if self.mproc_enabled:
+            replica.set_active_request(req)
+
         next_token = replica.do_one_iteration(req)
         next_token = next_token.cpu()
 
         req.next_token_ids = next_token
         req.generated.append(req.next_token_ids)
+
+        if self.mproc_enabled:
+            req.cache.layers.clear() # the cache layers is probably already empty
+            for i, stage in enumerate(replica.stages):
+                pipe = replica.ctrl_pipe[i]
+                pipe.send((COMMAND_EXTRACT_KV_CACHE, None))
+                kind, internal_cache = pipe.recv()
+                assert kind == COMMAND_EXTRACT_KV_CACHE_ACK
+                for l in range(stage.first_layer_index, stage.last_layer_index):
+                    lyr = internal_cache.layers[l]
+                    req.cache.layers.append(lyr) 
+            # print('After extracing kv:', len(req.cache.layers))
 
         # print(len(requests))
         # for r in requests:
@@ -97,24 +119,27 @@ class SimplePipeline:
         torch.cuda.synchronize()
 
     def _do_process_reqeust(self, req: Request) -> None:
-        stat = ExecutionStatistics(self.num_stages,
-                                   [len(s.layers) for s in self.replica.stages])
+        # stat = ExecutionStatistics(self.num_stages,
+        #                            [len(s.layers) for s in self.replica.stages])
         # stat = None
         for _ in range(self.max_length):
-            next_token = self.replica.do_one_iteration(req, stat)
+            next_token = self.replica.do_one_iteration(req)
             req.generated.append(next_token)
             req.next_token_ids = next_token
 
         self.print_output(req)
-        stat.report()
+        # stat.report()
         tmp = req.cache.layers[0].keys.shape
         print('Req', req.id, 'size:', req.cache_size_bytes(), 'number of tokens:', tmp[2], f'(shape: {tmp})')
         req.free()
+    
+    def _mproc_process_requests(self) -> None:
+        while self.run_queue:
+            req = self.run_queue.pop()
+            self.replica.set_active_request(req) # load request KV-cache
+            self._do_process_reqeust(req)
 
-    def process_requests(self)-> None:
-        if not self.run_queue:
-            return
-
+    def _sproc_process_requests(self) -> None:
         # How to split KV cache between stages
         count = len(self.run_queue[0].cache.layers)
         r = count // self.num_stages
@@ -125,4 +150,13 @@ class SimplePipeline:
             # move batch of requests to GPUs
             req.move_to(dev_map, non_blocking=True)
             self._do_process_reqeust(req)
+
+    def process_requests(self)-> None:
+        if not self.run_queue:
+            return
+
+        if self.mproc_enabled:
+            self._mproc_process_requests()
+        else:
+            self._sproc_process_requests()
 
