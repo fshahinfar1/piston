@@ -16,10 +16,7 @@ class SimplePipeline:
         self.num_stages = num_stages
         self.device_list = device_list
         self.mproc_enabled = MPROC_ENABLED
-        if self.mproc_enabled:
-            self.replica = MPROC_Replica(model_name, num_stages, device_list)
-        else:
-            self.replica = Replica(model_name, num_stages, device_list)
+        self.replica = self._build_replica(model_name, num_stages, device_list)
         # self.available_memory = available_memory
         self.max_length = max_length
         # self.batch_size = get_batch_size(self.replica, max_length, self.available_memory)
@@ -30,6 +27,17 @@ class SimplePipeline:
         self.run_queue: List[Request] = [] # Requests can actually be batched Rquests
 
         self.do_print = do_print
+    
+    def _build_replica(self, model_name, num_stages, device_list) -> Any:
+        """
+        This function creates an indirection which allows the inheriting classes
+        to select their own version of replica manager.
+        """
+        if self.mproc_enabled:
+            replica = MPROC_Replica(model_name, num_stages, device_list)
+        else:
+            replica = Replica(model_name, num_stages, device_list)
+        return replica
 
     def close(self) -> None:
         if self.mproc_enabled:

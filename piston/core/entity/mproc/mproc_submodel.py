@@ -8,16 +8,7 @@ from transformers.generation.utils import DynamicCache
 from transformers.cache_utils import DynamicLayer
 
 from piston.core.entity.submodel import SubModel, SubModelOutput
-
-
-COMMAND_NEW_REQ = 100
-COMMAND_NEW_REQ_ACK = 101
-COMMAND_DO_FORWARD = 102
-COMMAND_DO_FORWARD_ACK = 103
-COMMAND_EXTRACT_KV_CACHE = 104
-COMMAND_EXTRACT_KV_CACHE_ACK = 104
-
-COMMAND_TERMINATE = 300
+from piston.core.entity.mproc.command_codes import *
 
 
 MPROC_SubModelInput = collections.namedtuple('MPROC_SubModelInput',
@@ -30,10 +21,9 @@ class MPROC_SubModel(SubModel):
     Implement each stage of the pipeline as a separate process to fully utilize
     multiple cores and launch kernel on the GPU in parallel. The down side is
     each process must own its own tensor objects which complicates sharing them.
-
-    TODO: I should add the logic for swapping KV-cache in this class
     """
-    def __init__(self, stage: int, pipe: multiprocessing.Pipe, ctrl_pipe, swapping=False):
+    def __init__(self, stage: int, pipe: multiprocessing.Pipe,
+                 ctrl_pipe: multiprocessing.Pipe):
         super().__init__(stage)
 
         self.is_last_stage = False
@@ -63,7 +53,6 @@ class MPROC_SubModel(SubModel):
         When we start processing a new request, load its relevant part of the
         cache to the memory managed by this process
         """
-        # print('???', str(self.device), self.first_layer_index, self.last_layer_index)
         # Remove the old cache and create a new one
         del self.cache
         self.cache = DynamicCache()
@@ -75,12 +64,10 @@ class MPROC_SubModel(SubModel):
 
         self.cache.layers.clear()
         # Add some empty layers
-        # print('---', str(self.device), len(req.cache.layers), self.first_layer_index)
         for i in range(self.first_layer_index):
             self.cache.layers.append(DynamicLayer())
 
         # Bring the assigned kv-cache layers to the GPU device dedicated to this stage
-        # print('***', str(self.device), self.first_layer_index, self.last_layer_index, len(self.cache.layers))
         for i in range(self.first_layer_index, self.last_layer_index):
             lyr = DynamicLayer()
             lyr.keys = req.cache.layers[i].keys.to(self.device, non_blocking=True)

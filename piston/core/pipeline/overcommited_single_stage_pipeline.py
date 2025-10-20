@@ -11,7 +11,7 @@ from transformers.masking_utils import (
 
 from piston.core.pipeline.simple_pipeline import SimplePipeline
 from piston.core.entity.request import Request
-from piston.core.entities import SubModel
+from piston.core.entity.replica import SubModel
 
 # from piston.utils.worker import Worker, Promise
 # from piston.utils.circular_range import CircularRange

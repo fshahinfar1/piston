@@ -6,18 +6,21 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from piston.core.entity.request import Request
 from piston.constants import LOCAL_FILE_ONLY
-from piston.core.entity.mproc.mproc_submodel import MPROC_SubModel, MPROC_SubModelInput
+from piston.core.entity.mproc.mproc_submodel import MPROC_SubModelInput
+from piston.core.entity.mproc.mproc_swapping_submodel import MPROC_Swapping_SubModel
 from piston.core.entity.mproc.command_codes import *
 
 
-class MPROC_Replica:
-    def __init__(self, model_name, num_stages, device_list):
+class MPROC_Swapping_Replica:
+    def __init__(self, model_name: str, num_stages: int,
+                 device_list: List, spare_devices: List):
         """
         This class abstracts a full pipeline. A model splitted over multiple
         stages.
         """
-        assert num_stages > 0
+        assert num_stages == 2
         assert len(device_list) >= num_stages
+        assert len(spare_devices) >= num_stages
 
         model = AutoModelForCausalLM.from_pretrained(model_name,
                 device_map='cpu', torch_dtype=torch.float16,
@@ -39,7 +42,6 @@ class MPROC_Replica:
 
         # We communicate with the first stage using this pipe
         self.pipe_other_end, self.pipe = multiprocessing.Pipe(False)
-
         self.ctrl_pipe = []
     
         # prepare stages
@@ -49,7 +51,7 @@ class MPROC_Replica:
             ctrl_recv, ctrl_send = multiprocessing.Pipe(True)
             self.ctrl_pipe.append(ctrl_send)
 
-            stage = MPROC_SubModel(i, next_pipe, ctrl_recv)
+            stage = MPROC_Swapping_SubModel(i, next_pipe, ctrl_recv, spare_devices[i])
             self.stages.append(stage)
             next_pipe = stage.output_pipe_end
 
@@ -86,20 +88,41 @@ class MPROC_Replica:
 
         # move the lm_head to the last stage's device
         self.lm_head = self.lm_head.to(self.stages[-1].device)
+    
+    def change_swapping_state(self, val):
+        for pipe in self.ctrl_pipe:
+            pipe.send((COMMAND_SET_SWAP_STATE, val))
+        for pipe in self.ctrl_pipe:
+            kind, _ = pipe.recv()
+            assert kind == COMMAND_SET_SWAP_STATE_ACK
+    
+    def enable_swapping(self):
+        self.change_swapping_state(True)
 
-    def set_active_request(self, req) -> None:
-        cmd = (COMMAND_NEW_REQ, req)
+    def disable_swapping(self):
+        self.change_swapping_state(False)
+
+    def set_active_request_swap_ver(self, req1, req2) -> None:
+        cmd = (COMMAND_NEW_REQ, (req1, req2))
         self.pipe.send(cmd)
         # block until the last stage acknowledges configuring the kv-cache
         cmd = self.last_stage_pipe.recv()
         assert cmd[0] == COMMAND_NEW_REQ_ACK
         torch.cuda.synchronize() # make sure cuda copy operations are finished
-
-    def do_one_iteration(self, req: Request) -> torch.Tensor:
+    
+    def set_active_request(self, req) -> None:
         """
-        Do one full iteration on the request through all the stages of the pipeline.
-        This will return the next token.
-        The request must have gone through tokenization phase and have the next_token_ids set to the input for the first stage.
+        This is needed to be compatible with mproc_replica and simple pipeline
+        implementation
+        """
+        self.set_active_request_swap_ver(req, None)
+    
+    def async_start_iteration(self, req: Request):
+        """
+        Send a request for processing
+
+        NOTE: the order of passing request to this and the other function
+        that block for response is important.
         """
         payload = MPROC_SubModelInput(
             req.next_token_ids,
@@ -111,7 +134,15 @@ class MPROC_Replica:
             )
         cmd = (COMMAND_DO_FORWARD, payload)
         self.pipe.send(cmd)
+    
+    def await_iteration_result(self, req: Request):
+        """
+        Wait for a response from last stage and find the new token for the
+        request.
 
+        NOTE: the order of passing request to this function must match with
+        calling of async_start_iteration.
+        """
         # block until the last stage returns the new token
         kind, submodel_inp = self.last_stage_pipe.recv()
         assert kind == COMMAND_DO_FORWARD_ACK
@@ -131,3 +162,15 @@ class MPROC_Replica:
         req.clear_hidden_states()
 
         return next_token
+
+    def do_one_iteration(self, req: Request) -> torch.Tensor:
+        """
+        Do one full iteration on the request through all the stages of the pipeline.
+        This will return the next token.
+        The request must have gone through tokenization phase and have the next_token_ids set to the input for the first stage.
+
+        NOTE: This function is for fallback to basic pipeline execution. Useful
+        when we can not do swapping.
+        """
+        self.async_start_iteration(req)
+        return self.await_iteration_result(req)
