@@ -81,11 +81,11 @@ class SwappingPipeline(SimplePipeline):
             self.print_output(req2)
 
             # report stats about req
-            tmp = req1.cache.layers[0].keys.shape
-            print('Req', req1.id, 'size:', req1.cache_size_bytes(), 'number of tokens:', tmp[2], f'(shape: {tmp})')
+            # tmp = req1.cache.layers[0].keys.shape
+            # print('Req', req1.id, 'size:', req1.cache_size_bytes(), 'number of tokens:', tmp[2], f'(shape: {tmp})')
 
-            tmp = req2.cache.layers[0].keys.shape
-            print('Req', req2.id, 'size:', req2.cache_size_bytes(), 'number of tokens:', tmp[2], f'(shape: {tmp})')
+            # tmp = req2.cache.layers[0].keys.shape
+            # print('Req', req2.id, 'size:', req2.cache_size_bytes(), 'number of tokens:', tmp[2], f'(shape: {tmp})')
 
             # free memory of requests
             req1.free()

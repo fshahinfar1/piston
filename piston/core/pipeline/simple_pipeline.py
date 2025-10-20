@@ -8,7 +8,6 @@ from piston.core.statistics import ExecutionStatistics
 from piston.core.prefill_decode import do_prefill
 from piston.constants import *
 
-from piston.core.entity.mproc.mproc_submodel import COMMAND_EXTRACT_KV_CACHE, COMMAND_EXTRACT_KV_CACHE_ACK, COMMAND_TERMINATE
 
 class SimplePipeline:
     def __init__(self, model_name: str, num_stages: int, device_list: List,
@@ -41,9 +40,7 @@ class SimplePipeline:
 
     def close(self) -> None:
         if self.mproc_enabled:
-            for pipe in self.replica.ctrl_pipe:
-                pipe.send((COMMAND_TERMINATE, None))
-                pipe.close()
+            self.replica.terminate()
         return
 
     def print_output(self, req: Request) -> None:
@@ -77,16 +74,7 @@ class SimplePipeline:
         req.generated.append(req.next_token_ids)
 
         if self.mproc_enabled:
-            req.cache.layers.clear() # the cache layers is probably already empty
-            for i, stage in enumerate(replica.stages):
-                pipe = replica.ctrl_pipe[i]
-                pipe.send((COMMAND_EXTRACT_KV_CACHE, None))
-                kind, internal_cache = pipe.recv()
-                assert kind == COMMAND_EXTRACT_KV_CACHE_ACK
-                for l in range(stage.first_layer_index, stage.last_layer_index):
-                    lyr = internal_cache.layers[l]
-                    req.cache.layers.append(lyr) 
-            # print('After extracing kv:', len(req.cache.layers))
+            self.replica.extract_kv_cache(req)
 
         # print(len(requests))
         # for r in requests:
@@ -127,18 +115,17 @@ class SimplePipeline:
         torch.cuda.synchronize()
 
     def _do_process_reqeust(self, req: Request) -> None:
-        # stat = ExecutionStatistics(self.num_stages,
-        #                            [len(s.layers) for s in self.replica.stages])
-        # stat = None
         for _ in range(self.max_length):
             next_token = self.replica.do_one_iteration(req)
             req.generated.append(next_token)
             req.next_token_ids = next_token
 
         self.print_output(req)
-        # stat.report()
-        tmp = req.cache.layers[0].keys.shape
-        print('Req', req.id, 'size:', req.cache_size_bytes(), 'number of tokens:', tmp[2], f'(shape: {tmp})')
+
+        # self.replica.extract_kv_cache(req)
+        # tmp = req.cache.layers[0].keys.shape
+        # print('Req', req.id, 'size:', req.cache_size_bytes(), 'number of tokens:', tmp[2], f'(shape: {tmp})')
+
         req.free()
     
     def _mproc_process_requests(self) -> None:

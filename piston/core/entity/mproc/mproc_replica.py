@@ -87,6 +87,29 @@ class MPROC_Replica:
         # move the lm_head to the last stage's device
         self.lm_head = self.lm_head.to(self.stages[-1].device)
 
+    def terminate(self):
+        for pipe in self.ctrl_pipe:
+            pipe.send((COMMAND_TERMINATE, None))
+            pipe.close()
+    
+    def extract_kv_cache(self, req) -> None:
+        """
+        get KV cache layers of current active request in the pipeline
+        and wirtes it on the given request object.
+
+        NOTE: this function call is blocking
+        """
+        req.cache.layers.clear() # the cache layers is probably already empty
+        for i, stage in enumerate(self.stages):
+            pipe = self.ctrl_pipe[i]
+            pipe.send((COMMAND_EXTRACT_KV_CACHE, None))
+            kind, internal_cache = pipe.recv()
+            assert kind == COMMAND_EXTRACT_KV_CACHE_ACK
+            for l in range(stage.first_layer_index, stage.last_layer_index):
+                lyr = internal_cache.layers[l]
+                req.cache.layers.append(lyr) 
+        # print('After extracing kv:', len(req.cache.layers))
+
     def set_active_request(self, req) -> None:
         cmd = (COMMAND_NEW_REQ, req)
         self.pipe.send(cmd)
