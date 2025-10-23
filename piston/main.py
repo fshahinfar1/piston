@@ -63,7 +63,11 @@ def main():
             max_length=MAX_LENGTH, batch_size=BATCH_SIZE, do_print=VERBOSE)
     elif MODE == 'swapping':
         if num_stages == 1:
-            pipeline = OverCommitedSingleStagePipeline(SPARE_MEMORY, model_name,
+            if len(DEV_GPU_) > num_stages:
+                spare_memory = DEV_GPU_[num_stages]
+            else:
+                spare_memory = DEV_CPU
+            pipeline = OverCommitedSingleStagePipeline(spare_memory, model_name,
                             num_stages, DEV_GPU_, MAX_LENGTH, BATCH_SIZE, do_print=VERBOSE)
         else:
             devices = DEV_GPU_[:num_stages]

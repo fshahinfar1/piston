@@ -17,8 +17,7 @@ class MPROC_Swapping_SubModel(MPROC_SubModel):
 
     This variant of stage is aware of KV-Cache swapping logic
     """
-    def __init__(self, stage: int, pipe: multiprocessing.Pipe,
-                 ctrl_pipe: multiprocessing.Pipe, spare_device):
+    def __init__(self, stage: int, pipe, ctrl_pipe, spare_device):
         super().__init__(stage, pipe, ctrl_pipe)
 
         self.swap_enabled = False
@@ -93,17 +92,26 @@ class MPROC_Swapping_SubModel(MPROC_SubModel):
         self.count_active_request = 2
     
     def _swap(self, _, layer_index):
-        tmp_key = self.cache.layers[layer_index].keys.to(self.spare_device, non_blocking=True)
-        tmp_val = self.cache.layers[layer_index].values.to(self.spare_device, non_blocking=True)
+        with self.copy_stream[0]:
+            tmp_key = self.cache.layers[layer_index].keys.to(self.spare_device, non_blocking=True)
+            tmp_val = self.cache.layers[layer_index].values.to(self.spare_device, non_blocking=True)
 
-        tmp2_key = self.other_cache.layers[layer_index].keys.to(self.device, non_blocking=True)
-        tmp2_val = self.other_cache.layers[layer_index].values.to(self.device, non_blocking=True)
+        with self.copy_stream[1]:
+            tmp2_key = self.other_cache.layers[layer_index].keys.to(self.device, non_blocking=True)
+            tmp2_val = self.other_cache.layers[layer_index].values.to(self.device, non_blocking=True)
 
         self.cache.layers[layer_index].keys = tmp2_key
         self.cache.layers[layer_index].values = tmp2_val
 
         self.other_cache.layers[layer_index].keys = tmp_key
         self.other_cache.layers[layer_index].values = tmp_val
+    
+    def _forward(self, cmd: MPROC_SubModelInput) -> None:
+        # Wait for in-flight copy operations to finish before starting
+        # processing the next request
+        for s in self.copy_stream:
+            s.synchronize()
+        return super()._forward(cmd)
          
     def _handle_command(self, kind, payload):
         """
@@ -132,3 +140,9 @@ class MPROC_Swapping_SubModel(MPROC_SubModel):
             self.ctrl_pipe.send((COMMAND_SET_SWAP_STATE_ACK, payload))
         else:
             super()._handle_command(kind, payload)
+
+    def _initialize_stage(self):
+        super()._initialize_stage()
+        # Create a stream for swapping kv-cache
+
+        self.copy_stream = [torch.cuda.Stream(self.device, priority=0) for i in range(2)]

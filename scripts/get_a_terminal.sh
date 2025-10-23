@@ -7,7 +7,7 @@ salloc \
     --partition=boost_usr_prod \
     --nodes=1 \
     --ntasks=1 \
-    --cpus-per-task=4 \
+    --cpus-per-task=16 \
     --gres=gpu:4 \
     --mem=100G \
     --time=02:00:00 \

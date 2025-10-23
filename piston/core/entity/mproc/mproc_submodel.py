@@ -9,6 +9,8 @@ from transformers.cache_utils import DynamicLayer
 
 from piston.core.entity.submodel import SubModel, SubModelOutput
 from piston.core.entity.mproc.command_codes import *
+from piston.utils.pipe import SharedMemoryPipe, SharedPipeConnection
+from piston.constants import PIPE_SIZE
 
 
 MPROC_SubModelInput = collections.namedtuple('MPROC_SubModelInput',
@@ -22,8 +24,8 @@ class MPROC_SubModel(SubModel):
     multiple cores and launch kernel on the GPU in parallel. The down side is
     each process must own its own tensor objects which complicates sharing them.
     """
-    def __init__(self, stage: int, pipe: multiprocessing.Pipe,
-                 ctrl_pipe: multiprocessing.Pipe):
+    def __init__(self, stage: int, pipe: SharedPipeConnection,
+                 ctrl_pipe: SharedPipeConnection):
         super().__init__(stage)
 
         self.is_last_stage = False
@@ -31,13 +33,17 @@ class MPROC_SubModel(SubModel):
         # The version of cache owned by this stage
         self.cache = None 
 
+        self.comp_stream = None
+
         # Multiprocessing
         self.proc = multiprocessing.Process(target=self._main)
         self.input_pipe = pipe
-        self.output_pipe_end, self.output_pipe = multiprocessing.Pipe(False)
+        self.output_pipe_end, self.output_pipe = SharedMemoryPipe(PIPE_SIZE, False)
         self.ctrl_pipe = ctrl_pipe
 
     def ready(self) -> None:
+        # NOTE: just start the separate process, moving the model weights to
+        # device GPU happens in the new process
         self.proc.start()
     
     def _die(self):
@@ -97,14 +103,15 @@ class MPROC_SubModel(SubModel):
         if position_embeddings is not None:
             position_embeddings = position_embeddings.to(self.device, non_blocking=True)
 
-        out: SubModelOutput = self._do_forward(inputs_embeds,
-                                            self.cache,
-                                            attention_mask,
-                                            True,
-                                            cache_position,
-                                            position_ids,
-                                            causal_mask,
-                                            position_embeddings)
+        with self.comp_stream:
+            out: SubModelOutput = self._do_forward(inputs_embeds,
+                                                self.cache,
+                                                attention_mask,
+                                                True,
+                                                cache_position,
+                                                position_ids,
+                                                causal_mask,
+                                                position_embeddings)
         
         next_stage_input = MPROC_SubModelInput(out.hidden_states,
                                             attention_mask,
@@ -135,23 +142,38 @@ class MPROC_SubModel(SubModel):
         else:
             raise RuntimeError(f'Unexpected command code: {kind}')
     
+    def _initialize_stage(self):
+        # Move the model weights to GPU
+        super().ready()
+        torch.cuda.synchronize(self.device)
+
+        # Report used memory
+        tmp = torch.cuda.memory_allocated(self.device) 
+        print(str(self.device), ':', 'Memory usage:', tmp)
+
+        # Create a stream for doing computation
+        self.comp_stream = torch.cuda.Stream(self.device, priority=0)
+    
     def _main(self) -> None:
         """
         Main loop of the process handling the logic of this stage.
         """
         assert self.input_pipe is not None
-        # Move the model weights to GPU
-        super().ready()
+        self._initialize_stage()
 
-        torch.cuda.synchronize(self.device)
-        tmp = torch.cuda.memory_allocated(self.device) 
-        print(str(self.device), ':', 'Memory usage:', tmp)
-
+        pipes = [self.input_pipe, self.ctrl_pipe]
         while True:
-            pipes = mp.connection.wait([self.input_pipe, self.ctrl_pipe])
+            # NOTE: I moved to a shared memory implementation and this feature
+            # does not work anymore
+            # pipes = mp.connection.wait([self.input_pipe, self.ctrl_pipe])
             for pipe in pipes:
+                # check if there is something to receive 
+                if not pipe.poll(0):
+                    continue
+
                 kind, payload = pipe.recv()
                 if kind == COMMAND_TERMINATE:
                     self._die()
                     return
-                self._handle_command(kind, payload)
+                else:
+                    self._handle_command(kind, payload)

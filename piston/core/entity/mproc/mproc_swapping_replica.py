@@ -4,11 +4,12 @@ import torch
 import torch.multiprocessing as multiprocessing
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+from piston.constants import LOCAL_FILE_ONLY, PIPE_SIZE
 from piston.core.entity.request import Request
-from piston.constants import LOCAL_FILE_ONLY
 from piston.core.entity.mproc.mproc_submodel import MPROC_SubModelInput
 from piston.core.entity.mproc.mproc_swapping_submodel import MPROC_Swapping_SubModel
 from piston.core.entity.mproc.command_codes import *
+from piston.utils.pipe import SharedMemoryPipe
 
 
 class MPROC_Swapping_Replica:
@@ -41,14 +42,14 @@ class MPROC_Swapping_Replica:
         self.active_request = None
 
         # We communicate with the first stage using this pipe
-        self.pipe_other_end, self.pipe = multiprocessing.Pipe(False)
+        self.pipe_other_end, self.pipe = SharedMemoryPipe(PIPE_SIZE, False)
         self.ctrl_pipe = []
     
         # prepare stages
         self.stages = []
         next_pipe = self.pipe_other_end
         for i in range(num_stages):
-            ctrl_recv, ctrl_send = multiprocessing.Pipe(True)
+            ctrl_recv, ctrl_send = SharedMemoryPipe(PIPE_SIZE, True)
             self.ctrl_pipe.append(ctrl_send)
 
             stage = MPROC_Swapping_SubModel(i, next_pipe, ctrl_recv, spare_devices[i])
