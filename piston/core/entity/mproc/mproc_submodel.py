@@ -9,8 +9,7 @@ from transformers.cache_utils import DynamicLayer
 
 from piston.core.entity.submodel import SubModel, SubModelOutput
 from piston.core.entity.mproc.command_codes import *
-from piston.utils.pipe import SharedMemoryPipe, SharedPipeConnection
-from piston.constants import PIPE_SIZE
+from piston.utils.pipe import create_ipc_channel
 
 
 MPROC_SubModelInput = collections.namedtuple('MPROC_SubModelInput',
@@ -24,8 +23,7 @@ class MPROC_SubModel(SubModel):
     multiple cores and launch kernel on the GPU in parallel. The down side is
     each process must own its own tensor objects which complicates sharing them.
     """
-    def __init__(self, stage: int, pipe: SharedPipeConnection,
-                 ctrl_pipe: SharedPipeConnection):
+    def __init__(self, stage: int, pipe, ctrl_pipe):
         super().__init__(stage)
 
         self.is_last_stage = False
@@ -38,7 +36,7 @@ class MPROC_SubModel(SubModel):
         # Multiprocessing
         self.proc = multiprocessing.Process(target=self._main)
         self.input_pipe = pipe
-        self.output_pipe_end, self.output_pipe = SharedMemoryPipe(PIPE_SIZE, False)
+        self.output_pipe_end, self.output_pipe = create_ipc_channel(False)
         self.ctrl_pipe = ctrl_pipe
 
     def ready(self) -> None:
@@ -103,15 +101,14 @@ class MPROC_SubModel(SubModel):
         if position_embeddings is not None:
             position_embeddings = position_embeddings.to(self.device, non_blocking=True)
 
-        with self.comp_stream:
-            out: SubModelOutput = self._do_forward(inputs_embeds,
-                                                self.cache,
-                                                attention_mask,
-                                                True,
-                                                cache_position,
-                                                position_ids,
-                                                causal_mask,
-                                                position_embeddings)
+        out: SubModelOutput = self._do_forward(inputs_embeds,
+                                            self.cache,
+                                            attention_mask,
+                                            True,
+                                            cache_position,
+                                            position_ids,
+                                            causal_mask,
+                                            position_embeddings)
         
         next_stage_input = MPROC_SubModelInput(out.hidden_states,
                                             attention_mask,
@@ -135,8 +132,9 @@ class MPROC_SubModel(SubModel):
                 # pass the information of new request to next stages
                 self.output_pipe.send((kind, payload))
         elif kind == COMMAND_DO_FORWARD:
-            with torch.no_grad():
-                self._forward(payload) 
+            with self.comp_stream:
+                with torch.no_grad():
+                    self._forward(payload) 
         elif kind == COMMAND_EXTRACT_KV_CACHE:
             self.ctrl_pipe.send((COMMAND_EXTRACT_KV_CACHE_ACK, self.cache))
         else:
@@ -168,7 +166,7 @@ class MPROC_SubModel(SubModel):
             # pipes = mp.connection.wait([self.input_pipe, self.ctrl_pipe])
             for pipe in pipes:
                 # check if there is something to receive 
-                if not pipe.poll(0):
+                if not pipe.poll():
                     continue
 
                 kind, payload = pipe.recv()

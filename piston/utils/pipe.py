@@ -1,5 +1,5 @@
 
-import multiprocessing as mp
+import torch.multiprocessing as mp
 import pickle
 import struct
 import time
@@ -319,3 +319,33 @@ def _SharedMemoryPipe(size=1_048_576, duplex=True, ctx=None):
 
 def SharedMemoryPipe(size=1_048_576, duplex=True, ctx=None):
     return create_os_pipe(duplex)
+
+
+class QConnection:
+    def __init__(self, sq, rq):
+        self.send_queue = sq
+        self.recv_queue = rq
+    
+    def send(self, obj):
+        self.send_queue.put(obj, False)
+    
+    def recv(self):
+        return self.recv_queue.get()
+    
+    def poll(self):
+        return not self.recv_queue.empty()
+    
+    def close(self):
+        if self.send_queue is not None:
+            self.send_queue.close()
+        if self.recv_queue is not None:
+            self.recv_queue.close()
+
+
+def create_ipc_channel(duplex=True):
+    q_dir_1 = mp.Queue()
+    q_dir_2 = mp.Queue() if duplex else None
+
+    c1 = QConnection(q_dir_1, q_dir_2)
+    c2 = QConnection(q_dir_2, q_dir_1)
+    return c2, c1

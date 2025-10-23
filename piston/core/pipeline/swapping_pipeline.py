@@ -41,6 +41,7 @@ class SwappingPipeline(SimplePipeline):
             # back to simple pipeline
             if len(self.run_queue) == 1:
                 if swapping_state:
+                    print('disable swapping')
                     self.replica.disable_swapping()
                     swapping_state = False
 
@@ -58,6 +59,7 @@ class SwappingPipeline(SimplePipeline):
             if not swapping_state:
                 # NOTE: for enabling swapping we must have set two active
                 # requests for the pipeline
+                print('enable swapping')
                 self.replica.enable_swapping()
                 swapping_state = True
 

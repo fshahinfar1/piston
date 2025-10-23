@@ -106,12 +106,12 @@ class MPROC_Swapping_SubModel(MPROC_SubModel):
         self.other_cache.layers[layer_index].keys = tmp_key
         self.other_cache.layers[layer_index].values = tmp_val
     
-    def _forward(self, cmd: MPROC_SubModelInput) -> None:
-        # Wait for in-flight copy operations to finish before starting
-        # processing the next request
-        for s in self.copy_stream:
-            s.synchronize()
-        return super()._forward(cmd)
+    # def _forward(self, cmd: MPROC_SubModelInput) -> None:
+    #     # Wait for in-flight copy operations to finish before starting
+    #     # processing the next request
+    #     # for s in self.copy_stream:
+    #     #     s.synchronize()
+    #     return super()._forward(cmd)
          
     def _handle_command(self, kind, payload):
         """

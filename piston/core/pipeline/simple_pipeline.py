@@ -4,7 +4,6 @@ import torch
 from piston.core.entity import Request
 from piston.core.entity.replica import Replica
 from piston.core.entity.mproc.mproc_replica import MPROC_Replica
-from piston.core.statistics import ExecutionStatistics
 from piston.core.prefill_decode import do_prefill
 from piston.constants import *
 

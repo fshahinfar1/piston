@@ -9,9 +9,11 @@ from piston.core.entity.request import Request
 from piston.core.entity.mproc.mproc_submodel import MPROC_SubModelInput
 from piston.core.entity.mproc.mproc_swapping_submodel import MPROC_Swapping_SubModel
 from piston.core.entity.mproc.command_codes import *
-from piston.utils.pipe import SharedMemoryPipe
+from piston.utils.pipe import create_ipc_channel
 
 
+# TODO: this class is very similar to MPROC_Replica there is a lot of duplication.
+# It makes life easier if we get rid of it
 class MPROC_Swapping_Replica:
     def __init__(self, model_name: str, num_stages: int,
                  device_list: List, spare_devices: List):
@@ -42,14 +44,14 @@ class MPROC_Swapping_Replica:
         self.active_request = None
 
         # We communicate with the first stage using this pipe
-        self.pipe_other_end, self.pipe = SharedMemoryPipe(PIPE_SIZE, False)
+        self.pipe_other_end, self.pipe = create_ipc_channel(False)
         self.ctrl_pipe = []
     
         # prepare stages
         self.stages = []
         next_pipe = self.pipe_other_end
         for i in range(num_stages):
-            ctrl_recv, ctrl_send = SharedMemoryPipe(PIPE_SIZE, True)
+            ctrl_recv, ctrl_send = create_ipc_channel(True)
             self.ctrl_pipe.append(ctrl_send)
 
             stage = MPROC_Swapping_SubModel(i, next_pipe, ctrl_recv, spare_devices[i])
