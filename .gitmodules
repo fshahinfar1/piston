@@ -1,0 +1,3 @@
+[submodule "others/tree-of-thought-llm"]
+	path = others/tree-of-thought-llm
+	url = https://github.com/princeton-nlp/tree-of-thought-llm.git
