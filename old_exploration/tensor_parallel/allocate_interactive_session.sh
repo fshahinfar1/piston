@@ -1,6 +1,5 @@
 #!/bin/bash
 
-LAUNCH_COMMAND="srun -N 2 --ntasks-per-node 1 ./launch_script.sh"
 TASK_NAME=tensor_parallel_test
 TASK_SHARE_DISK=$WORK/$USER/$TASK_NAME/
 
@@ -23,8 +22,9 @@ trap "on_interrupt" SIGINT SIGHUP
 initialize
 
 # Request resources
+# sbatch \
 salloc \
-    --job-name=pipeline_test \
+    --job-name=tensor_para_test \
     --account=euhpc_d17_077 \
     --partition=boost_usr_prod \
     --nodes=2 \
@@ -32,7 +32,9 @@ salloc \
     --cpus-per-task=4 \
     --gres=gpu:1 \
     --mem=40G \
-    --time=00:20:00 \
-    $LAUNCH_COMMAND
+    --time=04:00:00 \
+ 
 
+# NOTE: run following script in the interactive session for the experiment
+# srun -N 2 --ntasks-per-node 1 ./launch_script.sh
 # ---

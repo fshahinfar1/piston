@@ -7,3 +7,4 @@ tags.*
 stderr.txt
 stdout.txt
 *.nsys-rep
+*.benchmarks.json

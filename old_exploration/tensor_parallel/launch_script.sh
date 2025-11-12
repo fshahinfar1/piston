@@ -1,8 +1,9 @@
-#! /bin/bash
+#!/bin/bash
 NID=$SLURM_NODEID
 TASK_NAME=tensor_parallel_test
 TASK_SHARE_DISK=$WORK/$USER/$TASK_NAME/
-MODEL_PATH=$WORK/$USER/models/phi3.5/models--microsoft--Phi-3.5-mini-instruct
+# MODEL_PATH=$WORK/$USER/models/phi3.5/models--microsoft--Phi-3.5-mini-instruct
+MODEL_PATH=$WORK/$USER/dequantized/phi35
 
 if [ ! -d $TASK_SHARE_DISK ]; then
     if [ $NID -eq 0 ]; then
@@ -33,6 +34,27 @@ module load cuda/12.2
 # Enable the python environment
 source $HOME/my_venv/bin/activate
 
+VLLM_IP_FILE=$TASK_SHARE_DISK/vllm_ip.txt
+VLLM_LOG=$TASK_SHARE_DISK/vllm_out.txt
+
+wait_for_vllm() {
+    while [ -z "$(grep 'Application startup complete' $VLLM_LOG)" ]; do
+        sleep 5
+    done
+}
+
+generate_traffic() {
+    VLLM_IP=$(cat $VLLM_IP_FILE)
+    VLLM_URL="http://$VLLM_IP:8000"
+    echo $VLLM_URL
+
+    guidellm benchmark \
+    --target $VLLM_URL \
+    --rate-type sweep \
+    --max-seconds 30 \
+    --data "prompt_tokens=256,output_tokens=128"
+}
+
 node0() {
     echo 0 > $TASK_SHARE_DISK/terminate.txt
     echo "NOT_SET" > $TASK_SHARE_DISK/head_host.txt
@@ -40,6 +62,12 @@ node0() {
 
     IP=$(cat $TASK_SHARE_DISK/ray_node0.txt | grep "ray start --address=" | cut -d '=' -f 2 | tr -d "'" | cut -d : -f 1)
     echo $IP > $TASK_SHARE_DISK/head_host.txt
+
+    echo "node0: Waiting for vLLM to start..."
+    wait_for_vllm
+
+    echo "node0: Ready to generate traffic"
+    generate_traffic
 
     while  true; do
         sleep 5
@@ -51,7 +79,12 @@ node0() {
 }
 
 node1() {
+    # Get the IP address of experiment interface
+    IP=$(ip -j addr show dev enp1s0f0 | jq '.[0].addr_info[].local' | tr -d \" | grep -e '^10.')
     echo $NAME > $TASK_SHARE_DISK/worker_host.txt
+
+    # Write the IP the traffic generator should use
+    echo $IP > $VLLM_IP_FILE
 
     # wait until head is started
     # TODO: can I do something better?
@@ -69,9 +102,14 @@ node1() {
         fi
     done
 
+    echo node1: Got Ray head IP. Connecting to it ...
     ray start --address="$HEAD_HOST_NAME:6379"
+
     sleep 2
-    vllm serve $MODEL_PATH --tensor-parallel-size 2  --distributed-executor-backend ray
+
+    echo node1: launching vLLM
+    # vllm serve $MODEL_PATH --tensor-parallel-size 2  --distributed-executor-backend ray 2>&1 | tee $VLLM_LOG
+    vllm serve $MODEL_PATH --pipeline-parallel-size 2  --distributed-executor-backend ray 2>&1 | tee $VLLM_LOG
 }
 
 main() {
