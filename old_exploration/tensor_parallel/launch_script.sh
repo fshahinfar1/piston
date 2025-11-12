@@ -108,11 +108,26 @@ node1() {
     sleep 2
 
     echo node1: launching vLLM
-    # vllm serve $MODEL_PATH --tensor-parallel-size 2  --distributed-executor-backend ray 2>&1 | tee $VLLM_LOG
-    vllm serve $MODEL_PATH --pipeline-parallel-size 2  --distributed-executor-backend ray 2>&1 | tee $VLLM_LOG
+    vllm serve $MODEL_PATH --tensor-parallel-size 2  --distributed-executor-backend ray 2>&1 | tee $VLLM_LOG
+    # vllm serve $MODEL_PATH --pipeline-parallel-size 2  --distributed-executor-backend ray 2>&1 | tee $VLLM_LOG
+}
+
+initialize() {
+    if [ ! -d $TASK_SHARE_DISK ]; then
+        mkdir -p $TASK_SHARE_DISK || exit 1
+    fi
+    echo 0 > $TASK_SHARE_DISK/terminate.txt
+    echo "NOT_SET" > $TASK_SHARE_DISK/head_host.txt
+    echo "NOT_SET" > $VLLM_IP_FILE
+    if [ -f $VLLM_LOG ]; then
+        # make sure we don't read start up status of previous run
+        rm $VLLM_LOG
+    fi
 }
 
 main() {
+    initialize
+
     case $NID in
         0) node0 ;;
         1) node1 ;;
