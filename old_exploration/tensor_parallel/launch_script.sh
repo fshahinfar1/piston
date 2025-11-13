@@ -113,8 +113,6 @@ node1() {
 }
 
 main() {
-    initialize
-
     case $NID in
         0) node0 ;;
         1) node1 ;;
