@@ -27,7 +27,7 @@ salloc \
     --job-name=tensor_para_test \
     --account=euhpc_d17_077 \
     --partition=boost_usr_prod \
-    --nodes=2 \
+    --nodes=3 \
     --ntasks-per-node=1 \
     --cpus-per-task=4 \
     --gres=gpu:1 \

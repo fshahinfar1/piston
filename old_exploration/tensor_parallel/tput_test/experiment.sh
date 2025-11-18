@@ -20,7 +20,6 @@ echo "NODELIST: $SLURM_NODELIST"
 # IFACE=enp1s0f0
 IFACE=ib0
 IP=$(ip -j addr show dev $IFACE | jq '.[0].addr_info[].local' | tr -d \" | grep -e '^10.')
-eth
 echo "$NAME: $IP"
 # ethtool $IFACE
 # ip addr
