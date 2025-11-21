@@ -13,20 +13,23 @@ fi
 
 echo "Inside the launch script"
 echo "NODEID: $NID"
-echo "PROCID: $SLURM_PROCID"
+# echo "PROCID: $SLURM_PROCID"
 NAME=$(hostname)
-echo "Hosetname: $NAME"
-echo "NODELIST: $SLURM_NODELIST"
+# echo "NODELIST: $SLURM_NODELIST"
 IFACE=ib0
 IP=$(ip -j addr show dev $IFACE | jq '.[0].addr_info[].local' | tr -d \" | grep -e '^10.')
-echo "$NAME: $IP"
+echo "Hosetname: $NAME: $IP"
 # ip addr
 # exit 0
 
-module load python/3.11.7
-module load cuda/12.2
+RAY_PORT=6379
+
+module load python/3.11.7 > /dev/null
+module load cuda/12.2 > /dev/null
 
 # nvidia-smi topo -m
+# nvidia-smi --query-gpu=gpu_name,memory.used,memory.free,memory.total --format=csv
+# ethtool -S $IFACE | grep "_packets_phy"
 # exit 0
 
 # Enable the python environment
@@ -70,6 +73,40 @@ while [ $# -gt 0 ]; do
 done
 # ------------------
 
+sample() {
+    INT=$1
+    CMD=$2
+
+    T=$(cat $TASK_SHARE_DISK/terminate.txt)
+    while [ $T -eq 0 ]; do
+        /bin/sh -c "$CMD"
+        sleep $INT;
+        T=$(cat $TASK_SHARE_DISK/terminate.txt)
+    done
+}
+
+record_sys_measurements() {
+    # Try to continuosly record system measures
+
+    # Measure interval in seconds
+    INT=5
+    # where to store results
+    O=$TASK_SHARE_DISK/sys_measure/
+    mkdir -p $O || (echo Failed to create output dir for system measurements; exit 1)
+
+    # memory usage
+    sample $INT "free -h" &> "${O}/node${NID}_mem.txt" &
+
+    # gpu mem usage
+    CMD="nvidia-smi --query-gpu=gpu_name,memory.used,memory.free,memory.total --format=csv"
+    sample $INT "${CMD}" &> "${O}/node${NID}_gpu_mem.txt" &
+
+    # network pkt/sec
+    CMD="ethtool -S ${IFACE} | grep _packets_phy"
+    sample $INT "${CMD}" &> "${O}/node${NID}_net_${IFACE}.txt" &
+    
+}
+
 wait_until_terminate_flag() {
     T=$(cat $TASK_SHARE_DISK/terminate.txt)
     while [ $T -eq 0 ]; do
@@ -97,10 +134,14 @@ generate_traffic() {
     VLLM_URL="http://$VLLM_IP:8000"
     echo $VLLM_URL
 
+    # curl --request GET "${VLLM_URL}/v1/models"
+    # return
+
     guidellm benchmark \
     --target $VLLM_URL \
-    --rate-type sweep \
-    --max-seconds 10 \
+    --model $MODEL_PATH  \
+    --profile sweep \
+    --max-seconds 20 \
     --data "prompt_tokens=$S_IN,output_tokens=$S_OUT"
 }
 
@@ -110,7 +151,7 @@ node0() {
 
     # Start a ray cluster
     echo "node0: starting ray ..."
-    ray start --head --port=6379 &> $TASK_SHARE_DISK/ray_node0.txt
+    ray start --head --port=$RAY_PORT &> $TASK_SHARE_DISK/ray_node0.txt
 
     HEAD_NODE_IP=$(cat $TASK_SHARE_DISK/ray_node0.txt | grep "ray start --address=" | cut -d '=' -f 2 | tr -d "'" | cut -d : -f 1)
     echo $HEAD_NODE_IP > $TASK_SHARE_DISK/head_node_ip.txt
@@ -124,17 +165,13 @@ node0() {
         NODE1_STATUS=$(cat $TASK_SHARE_DISK/node1_status.txt)
     done
 
-
-    # vllm serve $MODEL_PATH --tensor-parallel-size 2  --distributed-executor-backend ray 2>&1 | tee $VLLM_LOG
-    # vllm serve $MODEL_PATH --pipeline-parallel-size 2  --distributed-executor-backend ray 2>&1 | tee $VLLM_LOG
-
     if [ $MODE = tensor ]; then
         mode="--tensor-parallel-size 2"
     else
         mode="--pipeline-parallel-size 2"
     fi
 
-    echo "Experiment mode: $MODE   --  $mode"
+    echo "Experiment mode: $MODE  --  $mode"
 
     echo $HEAD_NODE_IP > $VLLM_IP_FILE
     echo "node0: starting vLLM ..."
@@ -143,10 +180,14 @@ node0() {
         --distributed-executor-backend ray \
         --host $HEAD_NODE_IP --port 8000 \
         2>&1 | tee $VLLM_LOG &> /dev/null &
+
+    
+    record_sys_measurements
     
     wait_until_terminate_flag
 
-    pkill VLLM:ENGINE
+    euid=$(id -u)
+    pkill -u $euid VLLM:ENGINE
 }
 
 node1() {
@@ -158,9 +199,8 @@ node1() {
     HEAD_NODE_IP=$(cat $TASK_SHARE_DISK/head_node_ip.txt)
     echo "node1: connect to ray at address $HEAD_NODE_IP"
 
-    ray start --address="$HEAD_NODE_IP:6379"
+    ray start --address="$HEAD_NODE_IP:$RAY_PORT"
     echo Ready > $TASK_SHARE_DISK/node1_status.txt
-
 
     # I must stop the script from closing. Otherwise thing don't work
     wait_until_terminate_flag
